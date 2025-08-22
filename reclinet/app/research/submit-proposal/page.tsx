@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
 const SubmitResearchProposalPage = () => {
+  const router = useRouter()
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0)
 
   const faqs = [
@@ -27,6 +29,15 @@ const SubmitResearchProposalPage = () => {
 
   const toggleFAQ = (index: number) => {
     setExpandedFAQ(expandedFAQ === index ? null : index)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Simulate form submission
+    setTimeout(() => {
+      // Redirect to project detail page with a sample ID
+      router.push('/project/1')
+    }, 1000)
   }
 
   return (
@@ -52,7 +63,7 @@ const SubmitResearchProposalPage = () => {
         </div>
 
         {/* Form */}
-        <form className="space-y-8">
+        <form className="space-y-8" onSubmit={handleSubmit}>
           {/* Project Title */}
           <div className="space-y-2">
             <Label htmlFor="projectTitle" className="text-base font-medium text-gray-900">

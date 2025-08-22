@@ -12,7 +12,8 @@ const Navbar = () => {
     { name: 'Home', url: '/', icon: Home },
     { name: 'Dashboard', url: '/dashboard', icon: BarChart2 },
     { name: 'Research', url: '/research', icon: Microscope },
-    { name: 'Community', url: '/community', icon: Users }
+    { name: 'Community', url: '/community', icon: Users },
+    { name: 'DAO', url: '/dao', icon: Users }
   ]
   
   return (
