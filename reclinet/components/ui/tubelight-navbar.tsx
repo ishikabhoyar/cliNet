@@ -126,4 +126,3 @@ export function NavBar({ items, className }: NavBarProps) {
     </div>
   )
 }
-
