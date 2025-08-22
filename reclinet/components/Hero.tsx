@@ -20,7 +20,7 @@ export default function Hero() {
                    
                     <a
                         href="/research/submit-proposal"
-                        className="px-8 py-3 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center flex items-center justify-center bg-[#DF7373]/25"
+                        className="bg-[#DF7373] hover:bg-[#DF7373]/90 px-8 py-3 border border-gray-200 font-medium rounded-lg transition-colors text-center flex items-center justify-center text-white"
                     >
                         Submit Research Proposal
                         <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
