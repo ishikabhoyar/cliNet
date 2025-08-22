@@ -17,15 +17,10 @@ export default function Hero() {
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                   
                     <a
                         href="#"
-                        className="px-8 py-3 bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 text-white font-medium rounded-lg hover:opacity-90 transition-opacity text-center"
-                    >
-                        Register as Patient
-                    </a>
-                    <a
-                        href="#"
-                        className="px-8 py-3 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center flex items-center justify-center"
+                        className="px-8 py-3 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center flex items-center justify-center bg-[#DF7373]/25"
                     >
                         Submit Research Proposal
                         <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
