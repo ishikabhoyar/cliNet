@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input"
 const CommunityPage = () => {
   const [activeTab, setActiveTab] = useState('discussions')
 
+  const scrollToGuidelines = () => {
+    const guidelinesSection = document.getElementById('guidelines-section')
+    if (guidelinesSection) {
+      guidelinesSection.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
   const communityStats = [
     { icon: Users, label: "Community Members", value: "12,847", color: "text-blue-600" },
     { icon: MessageCircle, label: "Active Discussions", value: "1,234", color: "text-green-600" },
@@ -164,7 +171,10 @@ const CommunityPage = () => {
               <Button className="bg-white text-[#DF7373] hover:bg-gray-100 px-6 py-3 rounded-lg font-medium">
                 Join Community
               </Button>
-              <Button variant="outline" className="border-white text-white hover:bg-white/10 px-6 py-3 rounded-lg font-medium">
+              <Button 
+                onClick={scrollToGuidelines}
+                className="bg-transparent text-white hover:bg-white hover:text-[#DF7373] px-6 py-3 rounded-lg font-medium transition-all duration-200"
+              >
                 View Guidelines
               </Button>
             </div>
@@ -368,8 +378,8 @@ const CommunityPage = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Links */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Links</h3>
+            <div id="guidelines-section" className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Community Guidelines & Quick Links</h3>
               <div className="space-y-3">
                 <a href="#" className="block text-[#DF7373] hover:underline">Community Guidelines</a>
                 <a href="#" className="block text-[#DF7373] hover:underline">Code of Conduct</a>
