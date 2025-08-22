@@ -11,9 +11,7 @@ const Navbar = () => {
   const navItems = [
     { name: 'Home', url: '/', icon: Home },
     { name: 'Dashboard', url: '/dashboard', icon: BarChart2 },
-    { name: 'Research', url: '/research', icon: Microscope },
-    { name: 'Funding', url: '/funding', icon: Landmark },
-    { name: 'Community', url: '/community', icon: Users }
+    { name: 'Researchers', url: '/researchers', icon: Microscope },
   ]
   
   return (
