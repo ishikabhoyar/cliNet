@@ -19,7 +19,7 @@ export default function Hero() {
                 <div className="flex flex-col sm:flex-row gap-4 mb-12">
                    
                     <a
-                        href="#"
+                        href="/research/submit-proposal"
                         className="px-8 py-3 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center flex items-center justify-center bg-[#DF7373]/25"
                     >
                         Submit Research Proposal
