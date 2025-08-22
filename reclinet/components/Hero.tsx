@@ -1,41 +1,67 @@
-import Image from "next/image";
 
 export default function Hero() {
-  return (
-    <section className="w-full flex flex-col items-center justify-center bg-[#eaf6f8] py-12 px-4 rounded-lg mt-8">
-      <div className="relative w-full max-w-3xl flex flex-col items-center">
-        <Image
-          src="/image.png"
-          alt="DNA background"
-          width={900}
-          height={300}
-          className="rounded-lg object-cover w-full h-[260px] sm:h-[300px] opacity-90"
-          priority
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4">
-          <h1 className="text-white text-3xl sm:text-5xl font-extrabold text-center drop-shadow-lg">
-            Revolutionizing Healthcare Through<br className="hidden sm:block" />
-            Decentralized Collaboration
-          </h1>
-          <p className="text-white text-lg sm:text-xl font-medium text-center mt-4 drop-shadow-md max-w-2xl">
-            DeCliNet empowers patients to securely share their data, researchers to access valuable insights, and funders to support groundbreaking projects, accelerating medical advancements for all.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 mt-8">
-            <a
-              href="#"
-              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded px-6 py-3 transition-colors shadow"
-            >
-              Register as Patient
-            </a>
-            <a
-              href="#"
-              className="bg-white text-gray-900 font-semibold rounded px-6 py-3 border border-gray-200 hover:bg-gray-100 transition-colors shadow"
-            >
-              Submit Research Proposal
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+    return (
+        <section className="w-full flex flex-col items-center justify-center py-16 px-2 sm:px-6 mt-4">
+            <div className="w-full max-w-5xl flex flex-col items-center">
+                <div className="inline-flex items-center px-4 py-2 bg-[#DF7373]/10 rounded-full mb-6 self-start">
+                    <span className="text-xs font-semibold text-[#DF7373]">Decentralized Health Data Platform</span>
+                </div>
+                
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+                    Revolutionizing Healthcare Through
+                    <span className="block bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 bg-clip-text text-transparent"> Decentralized Collaboration</span>
+                </h1>
+                
+                <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl">
+                    DeCliNet empowers patients to securely share their data, researchers to access valuable insights, and funders to support groundbreaking projects, accelerating medical advancements for all.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                    <a
+                        href="#"
+                        className="px-8 py-3 bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 text-white font-medium rounded-lg hover:opacity-90 transition-opacity text-center"
+                    >
+                        Register as Patient
+                    </a>
+                    <a
+                        href="#"
+                        className="px-8 py-3 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center flex items-center justify-center"
+                    >
+                        Submit Research Proposal
+                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </a>
+                </div>
+                
+                {/* Trust Indicators */}
+                <div className="flex flex-wrap gap-8 items-center">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-green-100 rounded-full p-1">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <span className="text-sm text-gray-600">HIPAA Compliant</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="bg-green-100 rounded-full p-1">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <span className="text-sm text-gray-600">End-to-End Encrypted</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="bg-green-100 rounded-full p-1">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <span className="text-sm text-gray-600">User-Controlled Access</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
 }
