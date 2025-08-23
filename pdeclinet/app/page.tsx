@@ -39,7 +39,7 @@ export default function Home() {
                 <Link href="/dashboard" className="px-8 py-3 bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 text-white font-medium rounded-lg hover:opacity-90 transition-opacity text-center">
                   Get Started
                 </Link>
-                <Link href="/research" className="px-8 py-3 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center flex items-center justify-center">
+                <Link href="/researchers" className="px-8 py-3 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-center flex items-center justify-center">
                   Learn More
                   <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
