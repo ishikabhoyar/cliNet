@@ -25,10 +25,12 @@ const ResearchPage = () => {
                   Submit Research Proposal
                 </Button>
               </Link>
-              <Button variant="outline" className="px-6 py-3 rounded-lg font-medium flex items-center gap-2">
-                <Search size={20} />
-                Browse Research
-              </Button>
+              <Link href="/dao/proposals">
+                <Button variant="outline" className="px-6 py-3 rounded-lg font-medium flex items-center gap-2">
+                  <Search size={20} />
+                  Browse Research
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
