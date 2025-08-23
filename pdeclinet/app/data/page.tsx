@@ -1,9 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import Navbar from "@/components/Navbar"
-
+import { useRouter } from "next/navigation"
 // Define health record type
 interface HealthRecord {
   id: string
@@ -35,104 +34,118 @@ interface UserInfo {
 type ConsentStatus = "active" | "expired" | "revoked" | "none";
 
 export default function MyDataPage() {
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([])
+  // User information dummy data
+  const [userInfo, setUserInfo] = useState<UserInfo>({
+    id: "user123",
+    name: "John Doe",
+    email: "john.doe@example.com",
+    walletAddress: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F"
+  })
+  
+  // Health records dummy data
+  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([
+    {
+      id: "record1",
+      data_type: "medical_history",
+      data_hash: "0x3fd54831f488a22b28398de0c567a3b064b937b571828bfb86f2d5f2d8c8cee1",
+      ipfs_hash: "QmW8DkbVN6nLh1c5b4AXaUzBFRnuCHmN47GQWkCyUAgkgH",
+      metadata_hash: "0x5fe982f7df4ebe7e2a8f7a3e2311af84cd0002abcdefa123456789abcdef0123",
+      data_size: 15360,
+      consent_hash: "0x9a7b5839aa5f1a698143c7b98dfb153df72932ad99c3c13ac1ea10a7889f5789",
+      created_at: "2024-06-15T10:30:00Z",
+      updated_at: "2024-06-15T10:30:00Z",
+      access_count: 3,
+      permissions: {
+        research: true,
+        commercial: false,
+        thirdParty: false,
+        anonymous: true
+      },
+      consent_active: true,
+      consent_type: "specific",
+      expiry_date: "2024-12-15T00:00:00Z"
+    },
+    {
+      id: "record2",
+      data_type: "lab_results",
+      data_hash: "0x2ad841e58d9045efb89d8c9d383e1e2f0f56c97adce9ed57e05c2c76f37c8921",
+      ipfs_hash: "QmT8DkbVN6nLh1c5b4AXaUzBFRnuCHmN47GQWkCyUAgkgR",
+      metadata_hash: "0x7fa341f5ef2ebe7e2a8f7a3e2311af84cd0002abcdefa123456789abcdef7231",
+      data_size: 8192,
+      consent_hash: "0x3b5c8421aa5f1a698143c7b98dfb153df72932ad99c3c13ac1ea10a7889f1234",
+      created_at: "2024-06-20T14:15:00Z",
+      updated_at: "2024-06-20T14:15:00Z",
+      access_count: 1,
+      permissions: {
+        research: true,
+        commercial: true,
+        thirdParty: true,
+        anonymous: true
+      },
+      consent_active: true,
+      consent_type: "full",
+      expiry_date: ""
+    },
+    {
+      id: "record3",
+      data_type: "vital_signs",
+      data_hash: "0x8cd5931f488a22b28398de0c567a3b064b937b571828bfb86f2d5f2d8c8a45ef",
+      ipfs_hash: "QmK9DkbVN6nLh1c5b4AXaUzBFRnuCHmN47GQWkCyUAgkLm",
+      metadata_hash: "0x1fe982f7df4ebe7e2a8f7a3e2311af84cd0002abcdefa123456789abcdef8765",
+      data_size: 4096,
+      consent_hash: "0x5c7b5839aa5f1a698143c7b98dfb153df72932ad99c3c13ac1ea10a7889f0123",
+      created_at: "2024-07-05T09:45:00Z",
+      updated_at: "2024-07-05T09:45:00Z",
+      access_count: 0,
+      permissions: {
+        research: true,
+        commercial: false,
+        thirdParty: false,
+        anonymous: true
+      },
+      consent_active: false,
+      consent_type: "limited",
+      expiry_date: "2024-10-05T00:00:00Z"
+    },
+    {
+      id: "record4",
+      data_type: "genetic_data",
+      data_hash: "0x6fd54831f488a22b28398de0c567a3b064b937b571828bfb86f2d5f2d8c8cbb2",
+      ipfs_hash: "QmW8DkbVN6nLh1c5b4AXaUzBFRnuCHmN47GQWkCyUBcdEf",
+      metadata_hash: "0x9fe982f7df4ebe7e2a8f7a3e2311af84cd0002abcdefa123456789abcdef4321",
+      data_size: 51200,
+      consent_hash: "0x8a7b5839aa5f1a698143c7b98dfb153df72932ad99c3c13ac1ea10a7889f9876",
+      created_at: "2024-07-10T16:20:00Z",
+      updated_at: "2024-07-10T16:20:00Z",
+      access_count: 2,
+      permissions: {
+        research: true,
+        commercial: false,
+        thirdParty: false,
+        anonymous: true
+      },
+      consent_active: true,
+      consent_type: "anonymous",
+      expiry_date: "2025-07-10T00:00:00Z"
+    }
+  ])
+  
   const [selectedRecord, setSelectedRecord] = useState<HealthRecord | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditingConsent, setIsEditingConsent] = useState(false)
-  const router = useRouter()
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api'
-
-  // Check authentication and load user data
+  // Simulate loading
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('authToken')
-        const userType = localStorage.getItem('userType')
-        const storedUserInfo = localStorage.getItem('userInfo')
+    // Simulate a 1-second loading delay
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+    
+    return () => clearTimeout(timer)
+  }, [])
 
-        if (!token || userType !== 'patient') {
-          router.push('/')
-          return
-        }
-
-        // Parse stored user info
-        if (storedUserInfo) {
-          const parsedUserInfo = JSON.parse(storedUserInfo)
-          setUserInfo(parsedUserInfo)
-        }
-
-        // Fetch health records
-        await fetchHealthRecords(token)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        setError('Authentication failed. Please login again.')
-        router.push('/')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router])
-
-  // Fetch health records
-  const fetchHealthRecords = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/patient/health-records`, {
-        headers: {
-          'x-auth-token': `${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setHealthRecords(data.records || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch health records:', error)
-      setError('Failed to load your health records. Please try again later.')
-    }
-  }
-
-  // Update consent for a record
-  const updateConsent = async (recordId: string, consentData: any) => {
-    try {
-      const token = localStorage.getItem('authToken')
-      if (!token) {
-        setError('Authentication token not found. Please login again.')
-        return false
-      }
-
-      const response = await fetch(`${API_BASE_URL}/patient/consent/${recordId}`, {
-        method: 'PUT',
-        headers: {
-          'x-auth-token': `${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(consentData)
-      })
-
-      if (response.ok) {
-        // Refresh records after update
-        await fetchHealthRecords(token)
-        return true
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to update consent')
-      }
-    } catch (error) {
-      console.error('Error updating consent:', error)
-      setError('Failed to update consent. Please try again later.')
-      return false
-    }
-  }
-
-  // Handle consent update form submission
+  // Handle consent update form submission (dummy implementation)
   const handleConsentUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedRecord) return
@@ -149,15 +162,27 @@ export default function MyDataPage() {
       anonymous: form.anonymousConsent.checked
     }
 
-    const success = await updateConsent(selectedRecord.id, {
-      consentType,
+    // Update the selected record with the new consent settings
+    const updatedRecord = {
+      ...selectedRecord,
+      consent_type: consentType,
       permissions,
-      expiryDate: expiryDate || null
-    })
-
-    if (success) {
-      setIsEditingConsent(false)
+      expiry_date: expiryDate || null
     }
+    
+    // Update the record in the healthRecords array
+    setHealthRecords(healthRecords.map(record => 
+      record.id === selectedRecord.id ? updatedRecord : record
+    ))
+    
+    // Update the selected record
+    setSelectedRecord(updatedRecord)
+    
+    // Close the edit form
+    setIsEditingConsent(false)
+    
+    // Show success message (could use a toast notification in a real app)
+    alert("Consent settings updated successfully!")
   }
 
   // Format date for display
@@ -206,14 +231,17 @@ export default function MyDataPage() {
       .join(' ')
   }
 
-  // Handle logout
+  // Handle logout (dummy function)
   const handleLogout = () => {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('userType')
-    localStorage.removeItem('walletAddress')
-    localStorage.removeItem('userInfo')
-    router.push('/')
+    alert('Logout functionality would go here in a real implementation')
   }
+
+  // Handle navigation to upload page
+  const router = useRouter();
+  const handleNavigateToUpload = () => {
+    router.push('/upload');
+  }
+  
 
   if (isLoading) {
     return (
@@ -239,7 +267,7 @@ export default function MyDataPage() {
           <div className="text-center">
             <p className="text-red-600 mb-4">{error}</p>
             <button 
-              onClick={() => router.push('/')}
+              onClick={() => alert('Navigation to home would happen here')}
               className="px-4 py-2 bg-[#DF7373] text-white rounded-lg hover:bg-[#DF7373]/90"
             >
               Go Home
@@ -263,13 +291,13 @@ export default function MyDataPage() {
                 My Health Data
               </h1>
               <p className="text-gray-600 mt-1">Manage your health records and consent settings</p>
-              {userInfo?.email && (
+              {userInfo.email && (
                 <p className="text-sm text-gray-500 mt-1">{userInfo.email}</p>
               )}
             </div>
             <div>
               <button
-                onClick={() => router.push('/upload')}
+                onClick={() => handleNavigateToUpload()}
                 className="px-4 py-2 text-white bg-[#DF7373] rounded-lg hover:bg-[#DF7373]/90 mr-3"
               >
                 Upload New Data
@@ -332,7 +360,7 @@ export default function MyDataPage() {
                 </svg>
                 <p>No health records found</p>
                 <button
-                  onClick={() => router.push('/upload')}
+                  onClick={() => alert('Navigation to upload page would happen here')}
                   className="mt-3 px-4 py-2 text-sm text-white bg-[#DF7373] rounded-lg hover:bg-[#DF7373]/90"
                 >
                   Upload Your First Record

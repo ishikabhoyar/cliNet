@@ -1,9 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import Navbar from "@/components/Navbar"
-
+import navigation from "next/navigation"
 // Simple Chevron SVG components
 const ChevronDownIcon = ({className}: {className?: string}) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -76,14 +75,75 @@ interface AccessRequest {
 }
 
 export default function DashboardPage() {
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([])
+  // Dummy data instead of fetching from an API
+  const [userInfo, setUserInfo] = useState<UserInfo>({
+    id: "user123",
+    name: "John Doe",
+    email: "john.doe@example.com",
+    walletAddress: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F"
+  })
+  
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    totalTokens: 1250,
+    dataContributions: 8,
+    activeStudies: 3,
+    totalRecords: 12,
+    totalAccesses: 5,
+    uniqueDataTypes: 4
+  })
+  
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    { id: '1', type: 'data_submission_reward', amount: 250, description: 'Data Upload', created_at: '2024-07-20T00:00:00Z' },
+    { id: '2', type: 'study_participation', amount: 500, description: 'Study Participation', created_at: '2024-07-15T00:00:00Z' },
+    { id: '3', type: 'data_submission_reward', amount: 200, description: 'Data Upload', created_at: '2024-07-10T00:00:00Z' },
+    { id: '4', type: 'study_participation', amount: 150, description: 'Study Participation', created_at: '2024-07-05T00:00:00Z' },
+    { id: '5', type: 'initial_reward', amount: 150, description: 'Initial Data Upload', created_at: '2024-07-01T00:00:00Z' }
+  ])
+  
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: '1', type: 'access_request', message: 'New access request from Research Hospital', is_read: false, created_at: '2024-07-22T00:00:00Z' },
+    { id: '2', type: 'token_reward', message: 'You earned 250 DCNET tokens for your data contribution', is_read: true, created_at: '2024-07-20T00:00:00Z' },
+    { id: '3', type: 'study_invitation', message: 'You are invited to participate in a new diabetes study', is_read: false, created_at: '2024-07-18T00:00:00Z' }
+  ])
+  
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([
+    { 
+      id: '1', 
+      requester_id: 'res123', 
+      purpose: 'Cardiovascular Disease Research Study', 
+      duration: 90, 
+      status: 'pending', 
+      created_at: '2024-07-22T00:00:00Z',
+      wallet_address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      user_type: 'researcher',
+      data_type: 'cardiology'
+    },
+    { 
+      id: '2', 
+      requester_id: 'res456', 
+      purpose: 'Diabetes Prevention Clinical Trial', 
+      duration: 180, 
+      status: 'approved', 
+      created_at: '2024-07-15T00:00:00Z',
+      wallet_address: '0x2546BcD3c84621e976D8185a91A922aE77ECEc30',
+      user_type: 'researcher',
+      data_type: 'endocrinology'
+    },
+    { 
+      id: '3', 
+      requester_id: 'res789', 
+      purpose: 'Mental Health Analysis for Depression Treatments', 
+      duration: 120, 
+      status: 'rejected', 
+      created_at: '2024-07-10T00:00:00Z',
+      wallet_address: '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199',
+      user_type: 'researcher',
+      data_type: 'psychiatry'
+    }
+  ])
+  
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
 
   // FAQ data with state for opening/closing
   const [faqs, setFaqs] = useState<FAQ[]>([
@@ -103,175 +163,16 @@ export default function DashboardPage() {
       isOpen: false
     }
   ])
-
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api'
-
-  // Check authentication and load user data
+  
+  // Simulate loading
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('authToken')
-        const userType = localStorage.getItem('userType')
-        const storedUserInfo = localStorage.getItem('userInfo')
-
-        if (!token || userType !== 'patient') {
-          router.push('/')
-          return
-        }
-
-        // Parse stored user info
-        if (storedUserInfo) {
-          const parsedUserInfo = JSON.parse(storedUserInfo)
-          setUserInfo(parsedUserInfo)
-        }
-
-        // Fetch all dashboard data from backend
-        await Promise.all([
-          fetchPatientProfile(token),
-          fetchTokenTransactions(token),
-          fetchNotifications(token),
-          fetchAccessRequests(token),
-          fetchTokenBalance(token)
-        ])
-
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        setError('Authentication failed. Please login again.')
-        router.push('/')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router])
-
-  // Fetch patient profile and dashboard stats
-  const fetchPatientProfile = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/patient/profile`, {
-        headers: {
-          'x-auth-token': `${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Update user info with profile data
-        setUserInfo(prevInfo => ({
-          ...prevInfo!,
-          name: data.patient.name || prevInfo?.name,
-          email: data.patient.email || prevInfo?.email,
-          walletAddress: data.patient.walletAddress || prevInfo?.walletAddress
-        }))
-
-        // Set dashboard data from profile stats
-        setDashboardData({
-          totalTokens: 0, // Will be updated by fetchTokenBalance
-          dataContributions: data.patient.stats?.total_records || 0,
-          activeStudies: 3, // This would come from active research participations
-          totalRecords: data.patient.stats?.total_records || 0,
-          totalAccesses: data.patient.stats?.total_accesses || 0,
-          uniqueDataTypes: data.patient.stats?.unique_data_types || 0
-        })
-      }
-    } catch (error) {
-      console.error('Failed to fetch patient profile:', error)
-    }
-  }
-
-  // Fetch token balance
-  const fetchTokenBalance = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/patient/token-balance`, {
-        headers: {
-          'x-auth-token': `${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Update dashboard data with real token balance
-        setDashboardData(prevData => ({
-          ...prevData!,
-          totalTokens: data.balance || 0
-        }))
-      }
-    } catch (error) {
-      console.error('Failed to fetch token balance:', error)
-      // Balance will stay at the default set in fetchPatientProfile if this fails
-    }
-  }
-
-  // Fetch token transactions
-  const fetchTokenTransactions = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/patient/token-transactions`, {
-        headers: {
-          'x-auth-token': `${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setTransactions(data.transactions || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch token transactions:', error)
-      // Set default transactions if API fails
-      setTransactions([
-        { id: '1', type: 'data_submission_reward', amount: 250, description: 'Data Upload', created_at: '2024-07-20T00:00:00Z' },
-        { id: '2', type: 'study_participation', amount: 500, description: 'Study Participation', created_at: '2024-07-15T00:00:00Z' },
-        { id: '3', type: 'data_submission_reward', amount: 200, description: 'Data Upload', created_at: '2024-07-10T00:00:00Z' },
-        { id: '4', type: 'study_participation', amount: 150, description: 'Study Participation', created_at: '2024-07-05T00:00:00Z' },
-        { id: '5', type: 'initial_reward', amount: 150, description: 'Initial Data Upload', created_at: '2024-07-01T00:00:00Z' }
-      ])
-    }
-  }
-
-  // Fetch notifications
-  const fetchNotifications = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/patient/notifications`, {
-        headers: {
-          'x-auth-token': `${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data.notifications || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error)
-    }
-  }
-
-  // Fetch access requests
-  const fetchAccessRequests = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/patient/access-requests`, {
-        headers: {
-          'x-auth-token': `${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setAccessRequests(data.requests || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch access requests:', error)
-    }
-  }
+    // Simulate a 1-second loading delay to show loading state
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+    
+    return () => clearTimeout(timer)
+  }, [])
 
   // Toggle FAQ open/close
   const toggleFAQ = (index: number) => {
@@ -280,13 +181,9 @@ export default function DashboardPage() {
     ))
   }
 
-  // Handle logout
+  // Handle logout (just a dummy function now)
   const handleLogout = () => {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('userType')
-    localStorage.removeItem('walletAddress')
-    localStorage.removeItem('userInfo')
-    router.push('/')
+    alert('Logout functionality would go here in a real implementation')
   }
 
   // Format date for display
@@ -338,7 +235,7 @@ export default function DashboardPage() {
           <div className="text-center">
             <p className="text-red-600 mb-4">{error}</p>
             <button 
-              onClick={() => router.push('/')}
+              onClick={() => alert('Navigation to home would happen here')}
               className="px-4 py-2 bg-[#DF7373] text-white rounded-lg hover:bg-[#DF7373]/90"
             >
               Go Home
@@ -359,13 +256,13 @@ export default function DashboardPage() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Welcome back, {userInfo?.name || 'Patient'}
+                Welcome back, {userInfo.name}
               </h1>
               <p className="text-gray-600 mt-1">Track your DCNET token earnings and data contributions.</p>
-              {userInfo?.email && (
+              {userInfo.email && (
                 <p className="text-sm text-gray-500 mt-1">{userInfo.email}</p>
               )}
-              {userInfo?.walletAddress && (
+              {userInfo.walletAddress && (
                 <p className="text-xs text-gray-400 mt-1 font-mono">
                   {userInfo.walletAddress.slice(0, 6)}...{userInfo.walletAddress.slice(-4)}
                 </p>
@@ -409,10 +306,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline">
               <p className="text-3xl font-bold text-gray-900">
-                {dashboardData?.totalTokens !== undefined ? 
-                  dashboardData.totalTokens.toLocaleString() : 
-                  <span className="inline-block w-16 h-8 bg-gray-200 animate-pulse rounded"></span>
-                }
+                {dashboardData.totalTokens.toLocaleString()}
               </p>
               <span className="ml-2 text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">+15%</span>
             </div>
@@ -430,10 +324,10 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline">
               <p className="text-3xl font-bold text-gray-900">
-                {dashboardData?.dataContributions || 0}
+                {dashboardData.dataContributions}
               </p>
               <span className="ml-2 text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
-                +{dashboardData?.uniqueDataTypes || 0}
+                +{dashboardData.uniqueDataTypes}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">Records uploaded</p>
@@ -533,10 +427,7 @@ export default function DashboardPage() {
             <div className="mb-4">
               <div className="flex items-baseline">
                 <p className="text-2xl font-bold text-gray-900 mr-2">
-                  {dashboardData?.totalTokens !== undefined ? 
-                    dashboardData.totalTokens.toLocaleString() : 
-                    <span className="inline-block w-12 h-6 bg-gray-200 animate-pulse rounded"></span>
-                  }
+                  {dashboardData.totalTokens.toLocaleString()}
                 </p>
                 <span className="text-xs font-medium text-green-600">+15%</span>
               </div>
