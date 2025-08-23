@@ -4,7 +4,28 @@ const Patient = require('../models/patient');
 const ipfsService = require('../utils/ipfs');
 const encryptionService = require('../utils/encryption');
 const { web3, patientDataRegistry } = require('../config/web3');
-const db = require('../config/db'); // Add this import
+const fs = require('fs');
+const path = require('path');
+const db = require('../config/db');
+
+// Initialize DCNETToken contract
+let dcnetTokenContract;
+try {
+  const contractPath = path.join(__dirname, '../contracts/DCNETToken.json');
+  const contractJson = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+  const contractAbi = contractJson.abi;
+  
+  // Contract address from environment variables
+  const tokenContractAddress = process.env.DCNET_TOKEN_ADDRESS;
+  
+  // Create contract instance
+  if (tokenContractAddress) {
+    dcnetTokenContract = new web3.eth.Contract(contractAbi, tokenContractAddress);
+  }
+} catch (error) {
+  console.error('Error loading DCNETToken contract:', error.message);
+  dcnetTokenContract = null;
+}
 
 // Register a new patient
 exports.register = async (req, res) => {
@@ -462,5 +483,47 @@ exports.getTokenTransactions = async (req, res) => {
   } catch (error) {
     console.error('Token transactions retrieval error:', error);
     res.status(500).json({ error: true, message: 'Server error retrieving token transactions' });
+  }
+};
+
+// Get token balance from blockchain
+exports.getTokenBalance = async (req, res) => {
+  try {
+    // Get patient by user ID to retrieve wallet address
+    const patient = await Patient.getByWalletAddress(req.user.walletAddress);
+    
+    if (!patient) {
+      return res.status(404).json({ error: true, message: 'Patient not found' });
+    }
+    
+    let balance = 0;
+    
+    // If contract is available, get real balance from blockchain
+    if (dcnetTokenContract) {
+      try {
+        balance = await dcnetTokenContract.methods.balanceOf(patient.wallet_address).call();
+        // Convert from wei to tokens (assuming 18 decimals)
+        balance = web3.utils.fromWei(balance, 'ether');
+      } catch (contractError) {
+        console.error('Error getting token balance from contract:', contractError);
+        // Fallback to database records if contract call fails
+        const transactions = await Patient.getTokenTransactions(patient.id);
+        balance = transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+      }
+    } else {
+      // If contract is not available, calculate from database records
+      const transactions = await Patient.getTokenTransactions(patient.id);
+      balance = transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    }
+    
+    res.status(200).json({
+      error: false,
+      walletAddress: patient.wallet_address,
+      balance: parseFloat(balance),
+      formattedBalance: parseFloat(balance).toLocaleString()
+    });
+  } catch (error) {
+    console.error('Token balance retrieval error:', error);
+    res.status(500).json({ error: true, message: 'Server error retrieving token balance' });
   }
 };

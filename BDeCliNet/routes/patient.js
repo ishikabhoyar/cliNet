@@ -26,5 +26,6 @@ router.post('/access-requests/:requestId/respond', auth, patientController.respo
 router.get('/notifications', auth, patientController.getNotifications);
 router.put('/notifications/:notificationId/read', auth, patientController.markNotificationAsRead);
 router.get('/token-transactions', auth, patientController.getTokenTransactions);
+router.get('/token-balance', auth, patientController.getTokenBalance);
 
 module.exports = router;

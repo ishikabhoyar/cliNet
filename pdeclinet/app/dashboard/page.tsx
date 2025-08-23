@@ -130,7 +130,8 @@ export default function DashboardPage() {
           fetchPatientProfile(token),
           fetchTokenTransactions(token),
           fetchNotifications(token),
-          fetchAccessRequests(token)
+          fetchAccessRequests(token),
+          fetchTokenBalance(token)
         ])
 
       } catch (error) {
@@ -143,6 +144,7 @@ export default function DashboardPage() {
     }
 
     checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   // Fetch patient profile and dashboard stats
@@ -168,7 +170,7 @@ export default function DashboardPage() {
 
         // Set dashboard data from profile stats
         setDashboardData({
-          totalTokens: 1250, // This would come from token contract in real implementation
+          totalTokens: 0, // Will be updated by fetchTokenBalance
           dataContributions: data.patient.stats?.total_records || 0,
           activeStudies: 3, // This would come from active research participations
           totalRecords: data.patient.stats?.total_records || 0,
@@ -178,6 +180,31 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Failed to fetch patient profile:', error)
+    }
+  }
+
+  // Fetch token balance
+  const fetchTokenBalance = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/patient/token-balance`, {
+        headers: {
+          'x-auth-token': `${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Update dashboard data with real token balance
+        setDashboardData(prevData => ({
+          ...prevData!,
+          totalTokens: data.balance || 0
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch token balance:', error)
+      // Balance will stay at the default set in fetchPatientProfile if this fails
     }
   }
 
@@ -382,7 +409,10 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline">
               <p className="text-3xl font-bold text-gray-900">
-                {dashboardData?.totalTokens?.toLocaleString() || '1,250'}
+                {dashboardData?.totalTokens !== undefined ? 
+                  dashboardData.totalTokens.toLocaleString() : 
+                  <span className="inline-block w-16 h-8 bg-gray-200 animate-pulse rounded"></span>
+                }
               </p>
               <span className="ml-2 text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">+15%</span>
             </div>
@@ -503,7 +533,10 @@ export default function DashboardPage() {
             <div className="mb-4">
               <div className="flex items-baseline">
                 <p className="text-2xl font-bold text-gray-900 mr-2">
-                  {dashboardData?.totalTokens || 1250}
+                  {dashboardData?.totalTokens !== undefined ? 
+                    dashboardData.totalTokens.toLocaleString() : 
+                    <span className="inline-block w-12 h-6 bg-gray-200 animate-pulse rounded"></span>
+                  }
                 </p>
                 <span className="text-xs font-medium text-green-600">+15%</span>
               </div>
@@ -583,7 +616,7 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <p>No access requests</p>
-                  <p className="text-sm">Researchers haven't requested access to your data yet</p>
+                  <p className="text-sm">Researchers haven&apos;t requested access to your data yet</p>
                 </div>
               )}
             </div>

@@ -46,6 +46,12 @@ export default function Navbar() {
           >
             My Data
           </Link>
+          <Link 
+            href="/researchers"
+            className={`text-sm ${pathname === '/researchers' ? 'text-[#DF7373] font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Researchers
+          </Link>
           
           {isLoggedIn ? (
             <button
