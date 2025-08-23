@@ -9,6 +9,7 @@ dotenv.config();
 
 // Import routes
 const patientRoutes = require('./routes/patient');
+const researcherRoutes = require('./routes/researcher');
 
 // Initialize app
 const app = express();
@@ -22,11 +23,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/patient', patientRoutes);
+app.use('/api/researcher', researcherRoutes);
 app.use('/api/test', testRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'DeCliNet Patient API is running' });
+  res.status(200).json({ status: 'ok', message: 'DeCliNet API is running' });
 });
 
 // Error handling middleware
@@ -40,7 +42,7 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(5000, () => {
-  console.log(`DeCliNet Patient API running on port 5000`);
+  console.log(`DeCliNet API running on port 5000`);
 });
 
 module.exports = app;

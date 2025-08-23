@@ -57,10 +57,34 @@ const demographicsValidation = [
   validate
 ];
 
+// Profile update validation rules (for researchers)
+const profileUpdateValidation = [
+  check('institution').optional(),
+  check('specialization').optional(),
+  check('bio').optional().isLength({ max: 1000 }),
+  check('name').optional(),
+  check('title').optional(),
+  validate
+];
+
+// Access request validation rules
+const accessRequestValidation = [
+  check('datasetId', 'Dataset ID is required').not().isEmpty(),
+  check('purpose', 'Purpose is required').not().isEmpty(),
+  check('duration', 'Duration must be a number').isNumeric(),
+  body('requestedFields').custom(value => {
+    if (value && typeof value === 'object') return true;
+    throw new Error('Requested fields must be an object');
+  }),
+  validate
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
   dataSubmissionValidation,
   consentUpdateValidation,
-  demographicsValidation
+  demographicsValidation,
+  profileUpdateValidation,
+  accessRequestValidation
 };

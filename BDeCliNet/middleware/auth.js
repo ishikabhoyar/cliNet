@@ -18,11 +18,7 @@ module.exports = function(req, res, next) {
     
     // Add user from payload
     req.user = decoded;
-    
-    // Check if user is a patient
-    if (req.user.userType !== 'patient') {
-      return res.status(403).json({ error: true, message: 'Access denied: Not a patient' });
-    }
+
     
     next();
   } catch (err) {
