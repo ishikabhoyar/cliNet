@@ -2,15 +2,46 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { routes, getAuthHeader } from '@/app/api/routes'
+
+// Define the research project type
+interface ResearchProject {
+  title: string;
+  description: string;
+  goals: string;
+  methodology: string;
+  expectedOutcomes: string;
+  fundingAmount: string;
+  category?: string;
+  duration?: string;
+  keywords?: string[];
+}
 
 const SubmitResearchProposalPage = () => {
   const router = useRouter()
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  
+  // Form state
+  const [formData, setFormData] = useState<ResearchProject>({
+    title: '',
+    description: '',
+    goals: '',
+    methodology: '',
+    expectedOutcomes: '',
+    fundingAmount: '',
+    category: 'clinical',
+    duration: '12',
+    keywords: []
+  })
 
   const faqs = [
     {
@@ -31,13 +62,103 @@ const SubmitResearchProposalPage = () => {
     setExpandedFAQ(expandedFAQ === index ? null : index)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle form input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  // Handle select changes
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  // Handle keywords input (comma-separated)
+  const handleKeywordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const keywordArray = e.target.value.split(',').map(k => k.trim()).filter(k => k)
+    setFormData(prev => ({
+      ...prev,
+      keywords: keywordArray
+    }))
+  }
+
+  // Update the handleSubmit function
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Simulate form submission
-    setTimeout(() => {
-      // Redirect to project detail page with a sample ID
-      router.push('/project/1')
-    }, 1000)
+    setIsSubmitting(true)
+    setError(null)
+    setSuccess(null)
+    
+    try {
+      // Check if user is logged in
+      const authToken = localStorage.getItem('authToken')
+      if (!authToken) {
+        router.push('/login')
+        return
+      }
+      
+      // For development/testing only - simulate successful submission
+      // Remove this code when backend endpoint is available
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Development mode - simulating successful submission:', formData)
+        setSuccess('Research proposal submitted successfully! (Development mode)')
+        
+        setTimeout(() => {
+          router.push('/research/projects')
+        }, 2000)
+        return
+      }
+      
+      // API call to create research project
+      const response = await fetch(routes.createResearch, {
+        method: 'POST',
+        headers: getAuthHeader(),
+        body: JSON.stringify(formData)
+      })
+      
+      // Check for non-JSON responses (like HTML error pages)
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create research project')
+      }
+      
+      setSuccess('Research proposal submitted successfully!')
+      
+      // Redirect to project detail page after short delay
+      setTimeout(() => {
+        if (data.projectId) {
+          router.push(`/research/projects/${data.projectId}`)
+        } else {
+          router.push('/research/projects')
+        }
+      }, 2000)
+      
+    } catch (error) {
+      console.error('Error submitting research:', error)
+      
+      // More descriptive error message for 404
+      if (error instanceof Error && error.message.includes('404')) {
+        setError('The research submission API endpoint is not available yet. Please try again later or contact support.')
+      } else if (error instanceof SyntaxError) {
+        setError('Server returned an invalid response. The API endpoint may not be set up correctly.')
+      } else {
+        setError(error instanceof Error ? error.message : 'Failed to submit research proposal')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -62,43 +183,131 @@ const SubmitResearchProposalPage = () => {
           </div>
         </div>
 
+        {/* Status messages */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+        
+        {success && (
+          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <CheckCircle size={18} />
+            <span>{success}</span>
+          </div>
+        )}
+
         {/* Form */}
         <form className="space-y-8" onSubmit={handleSubmit}>
           {/* Project Title */}
           <div className="space-y-2">
-            <Label htmlFor="projectTitle" className="text-base font-medium text-gray-900">
+            <Label htmlFor="title" className="text-base font-medium text-gray-900">
               Project Title
             </Label>
             <Input
-              id="projectTitle"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
               placeholder="Enter a concise and descriptive title for your research project"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent"
+              required
+            />
+          </div>
+          
+          {/* Research Category */}
+          <div className="space-y-2">
+            <Label htmlFor="category" className="text-base font-medium text-gray-900">
+              Research Category
+            </Label>
+            <Select 
+              value={formData.category} 
+              onValueChange={(value) => handleSelectChange('category', value)}
+            >
+              <SelectTrigger className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="clinical">Clinical Research</SelectItem>
+                <SelectItem value="genomics">Genomics</SelectItem>
+                <SelectItem value="public_health">Public Health</SelectItem>
+                <SelectItem value="neuroscience">Neuroscience</SelectItem>
+                <SelectItem value="oncology">Oncology</SelectItem>
+                <SelectItem value="cardiology">Cardiology</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Project Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="duration" className="text-base font-medium text-gray-900">
+              Project Duration (months)
+            </Label>
+            <Select 
+              value={formData.duration} 
+              onValueChange={(value) => handleSelectChange('duration', value)}
+            >
+              <SelectTrigger className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent">
+                <SelectValue placeholder="Select duration" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3 months</SelectItem>
+                <SelectItem value="6">6 months</SelectItem>
+                <SelectItem value="12">12 months</SelectItem>
+                <SelectItem value="18">18 months</SelectItem>
+                <SelectItem value="24">24 months</SelectItem>
+                <SelectItem value="36">36 months</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Keywords */}
+          <div className="space-y-2">
+            <Label htmlFor="keywords" className="text-base font-medium text-gray-900">
+              Keywords (comma-separated)
+            </Label>
+            <Input
+              id="keywords"
+              placeholder="e.g., genomics, cancer, machine learning"
+              value={formData.keywords?.join(', ')}
+              onChange={handleKeywordsChange}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent"
             />
           </div>
 
           {/* Project Description */}
           <div className="space-y-2">
-            <Label htmlFor="projectDescription" className="text-base font-medium text-gray-900">
+            <Label htmlFor="description" className="text-base font-medium text-gray-900">
               Project Description
             </Label>
             <Textarea
-              id="projectDescription"
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
               placeholder="Provide a detailed overview of your research project, including its background, significance, and objectives"
               rows={6}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent resize-none"
+              required
             />
           </div>
 
           {/* Research Goals */}
           <div className="space-y-2">
-            <Label htmlFor="researchGoals" className="text-base font-medium text-gray-900">
+            <Label htmlFor="goals" className="text-base font-medium text-gray-900">
               Research Goals
             </Label>
             <Textarea
-              id="researchGoals"
+              id="goals"
+              name="goals"
+              value={formData.goals}
+              onChange={handleChange}
               placeholder="Clearly state the specific goals and objectives of your research project"
               rows={6}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent resize-none"
+              required
             />
           </div>
 
@@ -109,9 +318,13 @@ const SubmitResearchProposalPage = () => {
             </Label>
             <Textarea
               id="methodology"
+              name="methodology"
+              value={formData.methodology}
+              onChange={handleChange}
               placeholder="Describe the methods and procedures you will use to conduct your research, including data collection and analysis techniques"
               rows={6}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent resize-none"
+              required
             />
           </div>
 
@@ -122,9 +335,13 @@ const SubmitResearchProposalPage = () => {
             </Label>
             <Textarea
               id="expectedOutcomes"
+              name="expectedOutcomes"
+              value={formData.expectedOutcomes}
+              onChange={handleChange}
               placeholder="Outline the anticipated results and impact of your research, including potential benefits to healthcare"
               rows={6}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent resize-none"
+              required
             />
           </div>
 
@@ -135,13 +352,25 @@ const SubmitResearchProposalPage = () => {
             </Label>
             <Input
               id="fundingAmount"
+              name="fundingAmount"
+              value={formData.fundingAmount}
+              onChange={handleChange}
               placeholder="Specify the total amount of funding you are requesting"
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#DF7373] focus:border-transparent"
+              required
             />
           </div>
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="px-6 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium"
+              onClick={() => router.back()}
+            >
+              Cancel
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -152,8 +381,9 @@ const SubmitResearchProposalPage = () => {
             <Button
               type="submit"
               className="px-6 py-3 bg-[#4A90E2] hover:bg-[#357ABD] text-white rounded-lg font-medium"
+              disabled={isSubmitting}
             >
-              Submit
+              {isSubmitting ? 'Submitting...' : 'Submit'}
             </Button>
           </div>
         </form>

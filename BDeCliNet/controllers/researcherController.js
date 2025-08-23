@@ -4,21 +4,46 @@ const ipfsService = require('../utils/ipfs');
 
 // Register a new researcher
 exports.register = async (req, res) => {
+  // Get these variables at the top level of the function so they're accessible in the catch block
+  const { walletAddress, email, name, googleId, profilePicture } = req.body;
+  
   try {
-    const { walletAddress, email, institution, specialization } = req.body;
-    
     // Check if researcher already exists
     const existingResearcher = await Researcher.getByWalletAddress(walletAddress);
     if (existingResearcher) {
-      return res.status(400).json({ error: true, message: 'Researcher already registered' });
+      // Generate JWT token for existing researcher
+      const token = jwt.sign(
+        { 
+          id: existingResearcher.id, 
+          walletAddress: existingResearcher.wallet_address, 
+          userType: 'researcher',
+          email: existingResearcher.email
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      
+      return res.status(200).json({ 
+        error: false, 
+        message: 'Researcher already registered', 
+        code: 'RESEARCHER_EXISTS',
+        token,
+        researcher: {
+          id: existingResearcher.id,
+          walletAddress: existingResearcher.wallet_address,
+          email: existingResearcher.email,
+          name: existingResearcher.name,
+          createdAt: existingResearcher.created_at
+        }
+      });
     }
     
     // Register researcher in database
-    const researcher = await Researcher.registerResearcher(walletAddress, email, institution, specialization);
+    const researcher = await Researcher.registerResearcher(walletAddress, email, null, null);
     
     // Generate a JWT token
     const token = jwt.sign(
-      { id: researcher.id, walletAddress: researcher.wallet_address, type: 'researcher' },
+      { id: researcher.id, walletAddress: researcher.wallet_address, userType: 'researcher' },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -31,13 +56,51 @@ exports.register = async (req, res) => {
         id: researcher.id,
         walletAddress: researcher.wallet_address,
         email: researcher.email,
-        institution: researcher.institution,
-        specialization: researcher.specialization,
+        name: researcher.name,
         createdAt: researcher.created_at
       }
     });
   } catch (error) {
     console.error('Registration error:', error);
+    
+    // Check for duplicate key error
+    if (error.code === '23505' && error.constraint === 'users_wallet_address_key') {
+      // Handle the case where the wallet address already exists
+      try {
+        // Get the existing researcher - walletAddress is now in scope
+        const existingResearcher = await Researcher.getByWalletAddress(walletAddress);
+        
+        // Generate JWT token for existing researcher
+        const token = jwt.sign(
+          { 
+            id: existingResearcher.id, 
+            walletAddress: existingResearcher.wallet_address, 
+            userType: 'researcher',
+            email: existingResearcher.email
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+        
+        return res.status(200).json({ 
+          error: false, 
+          message: 'Researcher already registered', 
+          code: 'RESEARCHER_EXISTS',
+          token,
+          researcher: {
+            id: existingResearcher.id,
+            walletAddress: existingResearcher.wallet_address,
+            email: existingResearcher.email,
+            name: existingResearcher.name,
+            createdAt: existingResearcher.created_at
+          }
+        });
+      } catch (secondaryError) {
+        console.error('Error handling existing researcher:', secondaryError);
+        return res.status(400).json({ error: true, message: 'Wallet address already registered' });
+      }
+    }
+    
     res.status(500).json({ error: true, message: 'Server error during registration' });
   }
 };
