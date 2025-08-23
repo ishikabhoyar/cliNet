@@ -1,117 +1,136 @@
 "use client"
 
-import * as React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Home, BarChart2, Microscope, Landmark, Users, Bell } from "lucide-react"
-import { NavBar } from "@/components/ui/tubelight-navbar"
+import { usePathname } from "next/navigation"
+import { Menu, X } from "lucide-react"
 
-const Navbar = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
-  
-  const navItems = [
-    { name: 'Home', url: '/', icon: Home },
-    { name: 'Dashboard', url: '/dashboard', icon: BarChart2 },
-    { name: 'Researchers', url: '/researchers', icon: Microscope },
-  ]
-  
+export default function Navbar() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const pathname = usePathname()
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('authToken')
+    setIsLoggedIn(!!token)
+  }, [pathname])
+
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
-      <div className="container flex h-16 items-center justify-between px-4 md:px-8 max-w-7xl mx-auto">
-        <div className="flex items-center">
-          <Link href="/" className="flex items-center space-x-2.5">
-            <div className="bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 text-white rounded-xl p-2 flex items-center justify-center shadow-md shadow-[#DF7373]/20">
-              <svg 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                className="h-5 w-5"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h9.75m4.5-4.5v12m0 0l-3.75-3.75M17.25 21L21 17.25" />
-              </svg>
-            </div>
-            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 bg-clip-text text-transparent">DeCliNet</span>
-          </Link>
-        </div>
-        
-        {/* Tubelight Navigation Bar */}
-        <div className="hidden md:block">
-          <NavBar items={navItems} className="static transform-none pt-0" />
-        </div>
-        
-        {/* User profile and notifications */}
-        <div className="hidden md:flex items-center space-x-4">
-          <button className="relative p-2 text-gray-700 hover:text-[#DF7373] hover:bg-[#DF7373]/10 rounded-full transition-all">
-            <Bell size={18} />
-            <span className="absolute top-1 right-1.5 h-2 w-2 rounded-full bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80"></span>
-          </button>
-          <div className="relative group">
-            {/* <div className="h-9 w-9 rounded-full bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 p-0.5 shadow-md cursor-pointer">
-              <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile" className="h-full w-full object-cover" />
-              </div>
-            </div> */}
-            
+    <header className="border-b border-gray-100 bg-white">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <Link href="/" className="flex items-center space-x-2">
+          <div className="w-8 h-8 rounded-md bg-[#DF7373] flex items-center justify-center">
+            <span className="text-white font-bold">D</span>
           </div>
-        </div>
+          <span className="font-bold text-xl">DeCliNet</span>
+        </Link>
         
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-6">
+          <Link 
+            href="/"
+            className={`text-sm ${pathname === '/' ? 'text-[#DF7373] font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Home
+          </Link>
+          <Link 
+            href="/dashboard"
+            className={`text-sm ${pathname === '/dashboard' ? 'text-[#DF7373] font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Dashboard
+          </Link>
+          <Link 
+            href="/data"
+            className={`text-sm ${pathname === '/data' ? 'text-[#DF7373] font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            My Data
+          </Link>
+          
+          {isLoggedIn ? (
+            <button
+              onClick={() => {
+                localStorage.removeItem('authToken')
+                localStorage.removeItem('userType')
+                localStorage.removeItem('walletAddress')
+                localStorage.removeItem('userInfo')
+                window.location.href = '/'
+              }}
+              className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link 
+              href="/login"
+              className="px-4 py-2 text-sm bg-[#DF7373] hover:bg-[#DF7373]/90 text-white rounded-lg transition-colors"
+            >
+              Login
+            </Link>
+          )}
+        </nav>
+        
+        {/* Mobile Menu Button */}
         <button 
-          className="md:hidden p-2 rounded-lg text-gray-700 hover:text-[#DF7373] hover:bg-[#DF7373]/10 transition-all"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden text-gray-500 hover:text-gray-700"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" x2="20" y1="12" y2="12"></line>
-            <line x1="4" x2="20" y1="6" y2="6"></line>
-            <line x1="4" x2="20" y1="18" y2="18"></line>
-          </svg>
+          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
       
-        {/* Mobile Tubelight Navbar */}
-      <div className="md:hidden">
-        <NavBar items={navItems} className="mobile-nav" />
-      </div>      {mobileMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-xl animate-in fade-in">
-          <div className="flex flex-col p-4">
-            <div className="flex items-center px-4 py-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 p-0.5 shadow-md">
-                <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile" className="h-full w-full object-cover" />
-                </div>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">Emma Wilson</p>
-                <p className="text-xs text-gray-500">emma@example.com</p>
-              </div>
-            </div>
-            <div className="border-t border-gray-100 my-3"></div>
-            <Link href="/profile" className="px-4 py-3 text-sm font-medium text-gray-700 hover:text-[#DF7373] hover:bg-[#DF7373]/10 rounded-lg transition-all flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              My Profile
+      {/* Mobile Navigation */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 py-4">
+          <div className="container mx-auto px-4 space-y-3">
+            <Link 
+              href="/"
+              className={`block py-2 px-4 rounded-lg ${pathname === '/' ? 'bg-[#DF7373]/10 text-[#DF7373]' : 'text-gray-600 hover:bg-gray-50'}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Home
             </Link>
-            <Link href="/settings" className="px-4 py-3 text-sm font-medium text-gray-700 hover:text-[#DF7373] hover:bg-[#DF7373]/10 rounded-lg transition-all mt-1 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-              </svg>
-              Settings
+            <Link 
+              href="/dashboard"
+              className={`block py-2 px-4 rounded-lg ${pathname === '/dashboard' ? 'bg-[#DF7373]/10 text-[#DF7373]' : 'text-gray-600 hover:bg-gray-50'}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Dashboard
             </Link>
-            <Link href="/logout" className="px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-all mt-1 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-              Sign Out
+            <Link 
+              href="/data"
+              className={`block py-2 px-4 rounded-lg ${pathname === '/data' ? 'bg-[#DF7373]/10 text-[#DF7373]' : 'text-gray-600 hover:bg-gray-50'}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              My Data
             </Link>
+            
+            {isLoggedIn ? (
+              <button
+                onClick={() => {
+                  localStorage.removeItem('authToken')
+                  localStorage.removeItem('userType')
+                  localStorage.removeItem('walletAddress')
+                  localStorage.removeItem('userInfo')
+                  window.location.href = '/'
+                  setIsMenuOpen(false)
+                }}
+                className="block w-full text-left py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link 
+                href="/login"
+                className="block py-2 px-4 bg-[#DF7373] text-white rounded-lg text-center"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
       )}
     </header>
   )
 }
-
-export default Navbar

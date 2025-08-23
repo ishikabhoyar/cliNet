@@ -9,20 +9,73 @@ const db = require('../config/db'); // Add this import
 // Register a new patient
 exports.register = async (req, res) => {
   try {
-    const { walletAddress, email } = req.body;
+    const { walletAddress, email, name, googleId, profilePicture } = req.body;
+    
+    console.log('Registration request received:', { walletAddress, email, name, googleId });
+    
+    // Validate required fields
+    if (!walletAddress) {
+      return res.status(400).json({ error: true, message: 'Wallet address is required' });
+    }
     
     // Check if patient already exists
     const existingPatient = await Patient.getByWalletAddress(walletAddress);
     if (existingPatient) {
-      return res.status(400).json({ error: true, message: 'Patient already registered' });
+      // Generate JWT token for existing patient
+      const token = jwt.sign(
+        { 
+          id: existingPatient.id, 
+          walletAddress: existingPatient.wallet_address, 
+          userType: 'patient',
+          email: existingPatient.email
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      
+      return res.status(200).json({ 
+        error: false, 
+        message: 'Patient already registered', 
+        code: 'PATIENT_EXISTS',
+        token,
+        patient: {
+          id: existingPatient.id,
+          walletAddress: existingPatient.wallet_address,
+          email: existingPatient.email,
+          name: existingPatient.name,
+          createdAt: existingPatient.created_at
+        }
+      });
+    }
+
+    // Check if email is already registered (if email is provided)
+    if (email) {
+      const existingEmail = await db.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+      if (existingEmail.rows.length > 0) {
+        return res.status(400).json({ error: true, message: 'Email already registered' });
+      }
     }
     
-    // Register patient in database
-    const newPatient = await Patient.registerPatient(walletAddress, email);
+    // Register patient in database with additional info
+    const newPatient = await Patient.registerPatient(walletAddress, email, {
+      name,
+      googleId,
+      profilePicture
+    });
+    
+    console.log('Patient registered successfully:', newPatient);
     
     // Generate a JWT token
     const token = jwt.sign(
-      { id: newPatient.id, walletAddress: newPatient.wallet_address, userType: 'patient' },
+      { 
+        id: newPatient.id, 
+        walletAddress: newPatient.wallet_address, 
+        userType: 'patient',
+        email: newPatient.email
+      },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -35,6 +88,7 @@ exports.register = async (req, res) => {
         id: newPatient.id,
         walletAddress: newPatient.wallet_address,
         email: newPatient.email,
+        name: newPatient.name,
         createdAt: newPatient.created_at
       }
     });
@@ -62,15 +116,25 @@ exports.authenticate = async (req, res) => {
       }
     }
     
-    // Get patient from database
+    // Check if patient exists
     const patient = await Patient.getByWalletAddress(walletAddress);
+    
     if (!patient) {
-      return res.status(404).json({ error: true, message: 'Patient not found' });
+      return res.status(404).json({ 
+        error: true, 
+        message: 'Patient not found. Please register first.', 
+        code: 'PATIENT_NOT_FOUND' 
+      });
     }
     
-    // Generate a JWT token
+    // Generate JWT token
     const token = jwt.sign(
-      { id: patient.id, walletAddress: patient.wallet_address, userType: 'patient' },
+      { 
+        id: patient.id, 
+        walletAddress: patient.wallet_address, 
+        userType: 'patient',
+        email: patient.email
+      },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -83,6 +147,7 @@ exports.authenticate = async (req, res) => {
         id: patient.id,
         walletAddress: patient.wallet_address,
         email: patient.email,
+        name: patient.name,
         createdAt: patient.created_at
       }
     });

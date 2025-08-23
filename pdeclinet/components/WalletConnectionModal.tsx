@@ -106,20 +106,22 @@ export default function WalletConnectionModal({
 
       const data = await response.json()
 
-      if (data.error) {
-        throw new Error(data.message || 'Registration failed')
+      // Check if user is already registered (code: PATIENT_EXISTS)
+      if (data.code === 'PATIENT_EXISTS') {
+        console.log('User already registered, proceeding with login');
+        // We still have the token and user info, so we can proceed
       }
 
       // Store auth data in localStorage
-      localStorage.setItem('authToken', data.token)
-      localStorage.setItem('userType', 'patient')
-      localStorage.setItem('walletAddress', connectedWallet)
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userType', 'patient');
+      localStorage.setItem('walletAddress', connectedWallet);
       localStorage.setItem('userInfo', JSON.stringify({
         id: data.patient.id,
         email: data.patient.email,
-        name: data.patient.name,
+        name: data.patient.name || 'Patient User',
         walletAddress: data.patient.walletAddress
-      }))
+      }));
 
       setRegistrationStatus('success')
       
