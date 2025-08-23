@@ -19,17 +19,17 @@ const DAOProposalsPage = () => {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // For debugging: Reset dummy data
-    localStorage.removeItem('dummyDataInitialized');
-    
     // Initialize dummy data if needed
     initializeDummyData();
+    
+    // Always sync DAO proposals with research projects before loading
+    syncDAOProposalsWithResearchProjects();
     
     // Load all proposals
     const allProposals = getDAOProposals();
     
     if (allProposals.length === 0) {
-      console.log("No proposals found. Checking for approved research projects...");
+      console.log("No proposals found. Approving some research projects...");
       
       // Get research projects and approve some if needed
       const projects = getResearchProjects();
@@ -38,7 +38,7 @@ const DAOProposalsPage = () => {
       // Update localStorage with approved projects
       localStorage.setItem('researchProjects', JSON.stringify(projects));
       
-      // Sync DAO proposals with the approved research projects
+      // Sync DAO proposals with the approved research projects again
       syncDAOProposalsWithResearchProjects();
       
       // Try to get proposals again
@@ -49,6 +49,16 @@ const DAOProposalsPage = () => {
     }
     
     setIsLoading(false);
+    
+    // Set up an interval to check for new proposals every 5 seconds
+    const intervalId = setInterval(() => {
+      syncDAOProposalsWithResearchProjects();
+      const refreshedProposals = getDAOProposals();
+      setProposals(refreshedProposals);
+    }, 5000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
   }, [])
 
   // Filter proposals based on current filter
@@ -121,7 +131,7 @@ const DAOProposalsPage = () => {
             </div>
           ) : (
             filteredProposals.map((proposal) => (
-              <Link href={`/dao`} key={proposal.id}>
+              <Link href={`/dao/${proposal.id}`} key={proposal.id}>
                 <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer">
                   <div className="flex flex-col md:flex-row md:items-start gap-6">
                     {/* Left side */}
@@ -184,7 +194,6 @@ const DAOProposalsPage = () => {
                       <Button 
                         className="w-full flex items-center justify-center gap-1"
                         variant={proposal.votingStatus === 'open' ? "default" : "outline"}
-                        disabled={proposal.votingStatus !== 'open'}
                       >
                         View Details
                         <ArrowUpRight className="h-4 w-4" />

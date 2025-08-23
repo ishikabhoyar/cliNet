@@ -1,23 +1,25 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { 
   initializeDummyData, 
-  getDAOProposals, 
   getDAOProposalById, 
   voteOnDAOProposal, 
   hasUserVotedOnProposal,
   syncDAOProposalsWithResearchProjects,
-  getResearchProjects,
-  approveResearchProjects,
   UserProfile,
   DAOProposal
 } from '@/lib/dummyData'
 
-const DAOVotingPage = () => {
+const DAOProposalPage = () => {
+  const params = useParams()
+  const router = useRouter()
+  const proposalId = params?.id as string
+  
   const [tokenAmount, setTokenAmount] = useState('')
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
   const [votingStatus, setVotingStatus] = useState('pending') // pending, voted-for, voted-against
@@ -32,40 +34,22 @@ const DAOVotingPage = () => {
     // Always sync DAO proposals with research projects before loading
     syncDAOProposalsWithResearchProjects();
     
-    // Load the first proposal and user profile
-    const proposals = getDAOProposals();
+    // Load the specified proposal by ID
+    const proposal = getDAOProposalById(proposalId);
     
-    if (proposals.length > 0) {
-      const activeProposal = proposals.find(p => p.votingStatus === 'open') || proposals[0];
-      setCurrentProposal(activeProposal);
+    if (proposal) {
+      setCurrentProposal(proposal);
       
       // Check if user has voted on this proposal
-      const voteInfo = hasUserVotedOnProposal(activeProposal.id);
+      const voteInfo = hasUserVotedOnProposal(proposal.id);
       if (voteInfo.voted && voteInfo.voteType) {
         setVotingStatus(`voted-${voteInfo.voteType}`);
         setTokenAmount(voteInfo.amount?.toString() || '');
       }
     } else {
-      console.log("No proposals found. Approving some research projects...");
-      
-      // Get research projects and approve some if needed
-      const projects = getResearchProjects();
-      approveResearchProjects(projects, 3);
-      
-      // Update localStorage with approved projects
-      localStorage.setItem('researchProjects', JSON.stringify(projects));
-      
-      // Sync DAO proposals with the approved research projects
-      syncDAOProposalsWithResearchProjects();
-      
-      // Try to get proposals again
-      const updatedProposals = getDAOProposals();
-      if (updatedProposals.length > 0) {
-        const activeProposal = updatedProposals.find(p => p.votingStatus === 'open') || updatedProposals[0];
-        setCurrentProposal(activeProposal);
-      } else {
-        console.log("Still no proposals after approving research projects");
-      }
+      // If proposal not found, redirect to main DAO page
+      router.push('/dao');
+      return;
     }
     
     // Load user profile
@@ -76,28 +60,23 @@ const DAOVotingPage = () => {
     
     setIsLoading(false);
     
-    // Set up an interval to check for new proposals every 5 seconds
+    // Set up an interval to check for proposal updates every 5 seconds
     const intervalId = setInterval(() => {
       syncDAOProposalsWithResearchProjects();
-      const refreshedProposals = getDAOProposals();
       
-      if (refreshedProposals.length > 0) {
-        setCurrentProposal(prevProposal => {
-          if (prevProposal) {
-            // If we already have a current proposal, find it in the refreshed list
-            const updatedProposal = refreshedProposals.find(p => p.id === prevProposal.id);
-            return updatedProposal || prevProposal;
-          } else {
-            // Otherwise, get the first open proposal or just the first one
-            return refreshedProposals.find(p => p.votingStatus === 'open') || refreshedProposals[0];
-          }
-        });
-      }
+      // Update the current proposal data
+      setCurrentProposal(prevProposal => {
+        if (prevProposal) {
+          const updatedProposal = getDAOProposalById(proposalId);
+          return updatedProposal || prevProposal;
+        }
+        return prevProposal;
+      });
     }, 5000);
     
     // Clean up interval on component unmount
     return () => clearInterval(intervalId);
-  }, []);
+  }, [proposalId, router]);
 
   const faqs = [
     {
@@ -187,14 +166,8 @@ const DAOVotingPage = () => {
 
   if (!currentProposal || !userProfile) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div>No active proposals found or user profile not loaded.</div>
-        <Button 
-          onClick={() => {window.location.href = '/dao/proposals'}}
-          className="bg-[#4A90E2] hover:bg-[#357ABD] text-white"
-        >
-          View All Proposals
-        </Button>
+      <div className="min-h-screen flex items-center justify-center">
+        No proposal found or user profile not loaded.
       </div>
     )
   }
@@ -436,7 +409,7 @@ const DAOVotingPage = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => window.location.href = '/dao/proposals'}
+                  onClick={() => router.push('/dao/proposals')}
                 >
                   View All Proposals
                 </Button>
@@ -455,4 +428,4 @@ const DAOVotingPage = () => {
   )
 }
 
-export default DAOVotingPage
+export default DAOProposalPage

@@ -131,6 +131,21 @@ const SubmitResearchProposalPage = () => {
         console.log('Research project created successfully:', newProject)
         setSuccess('Research proposal submitted successfully!')
         
+        // Simulate automatic approval after 2 seconds (for demo purposes)
+        setTimeout(() => {
+          import('@/lib/dummyData').then(({ updateResearchProject, syncDAOProposalsWithResearchProjects }) => {
+            // Update the project status to 'approved'
+            const updatedProject = updateResearchProject(newProject.id, { 
+              status: 'approved' 
+            });
+            
+            // Force synchronization with DAO proposals
+            syncDAOProposalsWithResearchProjects();
+            
+            console.log('Research project automatically approved for demo:', updatedProject);
+          });
+        }, 2000);
+        
         // Redirect to project detail page after short delay
         setTimeout(() => {
           router.push(`/research/projects/${newProject.id}`)
