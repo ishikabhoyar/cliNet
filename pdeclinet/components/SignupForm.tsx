@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
-import { FcGoogle } from "react-icons/fc"
 import GoogleSignIn from "./GoogleSignIn"
 
 const formSchema = z.object({
@@ -38,6 +38,14 @@ export function SignupForm() {
 
   const router = useRouter()
   
+  // State to store the redirect URL
+  const [redirectUrl, setRedirectUrl] = useState('')
+  
+  // Set the redirect URL only on the client side
+  useEffect(() => {
+    setRedirectUrl(`${window.location.origin}/callback`)
+  }, [])
+  
   // Handle form submission
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values)
@@ -57,7 +65,7 @@ export function SignupForm() {
         {/* Google Sign-In Button */}
         <div className="mb-6">
           <GoogleSignIn 
-            redirectUrl={`${window.location.origin}/callback`}
+            redirectUrl={redirectUrl}
           />
         </div>
         

@@ -3,6 +3,9 @@ import { Button } from '@/components/ui/button';
 
 const GoogleSignIn = ({ redirectUrl }) => {
   const handleGoogleSignIn = () => {
+    // If redirectUrl is not set yet (during initial server render), do nothing
+    if (!redirectUrl) return;
+    
     const encodedRedirectUrl = encodeURIComponent(redirectUrl);
     const googleAuthUrl = `https://small-mouse-2759.arnabbhowmik019.workers.dev/google/auth?redirect_url=${encodedRedirectUrl}`;
     
@@ -15,6 +18,7 @@ const GoogleSignIn = ({ redirectUrl }) => {
       onClick={handleGoogleSignIn}
       variant="outline"
       className="w-full flex items-center justify-center gap-2 h-11"
+      disabled={!redirectUrl}
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">
         <path
