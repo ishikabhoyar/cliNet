@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { routes, getAuthHeader } from '@/app/api/routes'
+import { initializeDummyData, getResearchProjects } from '@/lib/dummyData'
 
 interface ResearchProject {
   id: string
@@ -43,38 +44,14 @@ export default function ResearchProjectsPage() {
       return
     }
 
-    // Fetch research projects
-    const fetchProjects = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Build query string for filtering
-        const queryParams = new URLSearchParams()
-        if (statusFilter) queryParams.append('status', statusFilter)
-        if (categoryFilter) queryParams.append('category', categoryFilter)
-        if (sortBy) queryParams.append('sort', sortBy)
-        if (searchTerm) queryParams.append('search', searchTerm)
-        
-        const response = await fetch(
-          `${routes.getResearchProjects}?${queryParams.toString()}`, 
-          { headers: getAuthHeader() }
-        )
+    // Initialize dummy data first
+    initializeDummyData();
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch research projects')
-        }
+    // Get projects from local storage
+    const projectsFromStorage = getResearchProjects();
+    setProjects(projectsFromStorage);
+    setIsLoading(false);
 
-        const data = await response.json()
-        setProjects(data.projects || [])
-      } catch (error) {
-        console.error('Error fetching projects:', error)
-        setError('Failed to load research projects')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchProjects()
   }, [router, statusFilter, categoryFilter, sortBy, searchTerm])
 
   // Status badge color mapping

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { routes, getAuthHeader } from '@/app/api/routes'
+import { initializeDummyData, getResearchProjectById, deleteResearchProject } from '@/lib/dummyData'
 
 interface ResearchProject {
   id: string
@@ -57,35 +58,27 @@ export default function ResearchProjectPage() {
       return
     }
 
-    // Fetch project details
-    const fetchProject = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        const response = await fetch(
-          routes.getResearchProject(projectId), 
-          { headers: getAuthHeader() }
-        )
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Research project not found')
-          }
-          throw new Error('Failed to fetch research project details')
-        }
-
-        const data = await response.json()
-        setProject(data.project)
-      } catch (error) {
-        console.error('Error fetching project:', error)
-        setError(error instanceof Error ? error.message : 'Failed to load project details')
-      } finally {
-        setIsLoading(false)
+    // Initialize dummy data
+    initializeDummyData()
+    
+    // Fetch project from local storage
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const projectData = getResearchProjectById(projectId)
+      
+      if (!projectData) {
+        throw new Error('Research project not found')
       }
+      
+      setProject(projectData)
+    } catch (error) {
+      console.error('Error fetching project:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load project details')
+    } finally {
+      setIsLoading(false)
     }
-
-    fetchProject()
   }, [projectId, router])
 
   const toggleSection = (section: string) => {
@@ -98,15 +91,10 @@ export default function ResearchProjectPage() {
     try {
       setIsDeleting(true)
       
-      const response = await fetch(
-        routes.updateResearchProject(projectId), 
-        { 
-          method: 'DELETE',
-          headers: getAuthHeader() 
-        }
-      )
-
-      if (!response.ok) {
+      // Delete project from local storage
+      const success = deleteResearchProject(projectId)
+      
+      if (!success) {
         throw new Error('Failed to delete research project')
       }
 

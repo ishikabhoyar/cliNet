@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { routes, getAuthHeader } from '@/app/api/routes'
+import { initializeDummyData, createResearchProject } from '@/lib/dummyData'
 
 // Define the research project type
 interface ResearchProject {
@@ -29,6 +30,12 @@ const SubmitResearchProposalPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  
+  // Initialize dummy data on component mount
+  useEffect(() => {
+    // Initialize dummy data
+    initializeDummyData()
+  }, [])
   
   // Form state
   const [formData, setFormData] = useState<ResearchProject>({
@@ -88,7 +95,7 @@ const SubmitResearchProposalPage = () => {
     }))
   }
 
-  // Update the handleSubmit function
+  // Update the handleSubmit function to use local storage
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -103,19 +110,39 @@ const SubmitResearchProposalPage = () => {
         return
       }
       
-      // For development/testing only - simulate successful submission
-      // Remove this code when backend endpoint is available
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode - simulating successful submission:', formData)
-        setSuccess('Research proposal submitted successfully! (Development mode)')
+      // Use dummy data implementation
+      try {
+        // Create project in local storage
+        const numericFundingAmount = parseFloat(formData.fundingAmount.replace(/[^0-9.]/g, '')) || 0
+        const numericDuration = parseInt(formData.duration || '12', 10)
         
+        const newProject = createResearchProject({
+          title: formData.title,
+          description: formData.description,
+          goals: formData.goals,
+          methodology: formData.methodology,
+          expectedOutcomes: formData.expectedOutcomes,
+          fundingAmount: numericFundingAmount,
+          duration: numericDuration,
+          category: formData.category || 'clinical',
+          keywords: formData.keywords || []
+        })
+        
+        console.log('Research project created successfully:', newProject)
+        setSuccess('Research proposal submitted successfully!')
+        
+        // Redirect to project detail page after short delay
         setTimeout(() => {
-          router.push('/research/projects')
+          router.push(`/research/projects/${newProject.id}`)
         }, 2000)
+        
         return
+      } catch (error) {
+        console.error('Error creating project in local storage:', error)
+        throw new Error('Failed to create research project in local storage')
       }
       
-      // API call to create research project
+      // This code below won't run with our dummy implementation, but kept for future API integration
       const response = await fetch(routes.createResearch, {
         method: 'POST',
         headers: getAuthHeader(),
