@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Home, BarChart2, Microscope, Landmark, Users, Bell } from "lucide-react"
 import { NavBar } from "@/components/ui/tubelight-navbar"
 
@@ -13,7 +14,7 @@ const Navbar = () => {
     { name: 'Dashboard', url: '/dashboard', icon: BarChart2 },
     { name: 'Research', url: '/research', icon: Microscope },
     { name: 'Community', url: '/community', icon: Users },
-    { name: 'DAO', url: '/dao', icon: Users }
+    { name: 'DAO', url: '/dao', icon: Landmark }
   ]
   
   return (
@@ -78,7 +79,13 @@ const Navbar = () => {
             <div className="flex items-center px-4 py-3">
               <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#DF7373] to-[#DF7373]/80 p-0.5 shadow-md">
                 <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile" className="h-full w-full object-cover" />
+                  <Image 
+                    src="https://randomuser.me/api/portraits/women/44.jpg" 
+                    alt="Profile" 
+                    width={40}
+                    height={40}
+                    className="h-full w-full object-cover" 
+                  />
                 </div>
               </div>
               <div className="ml-3">

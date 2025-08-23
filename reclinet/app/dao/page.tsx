@@ -1,14 +1,81 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { 
+  initializeDummyData, 
+  getDAOProposals, 
+  getDAOProposalById, 
+  voteOnDAOProposal, 
+  hasUserVotedOnProposal,
+  syncDAOProposalsWithResearchProjects,
+  getResearchProjects,
+  approveResearchProjects,
+  UserProfile,
+  DAOProposal
+} from '@/lib/dummyData'
 
 const DAOVotingPage = () => {
   const [tokenAmount, setTokenAmount] = useState('')
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
   const [votingStatus, setVotingStatus] = useState('pending') // pending, voted-for, voted-against
+  const [currentProposal, setCurrentProposal] = useState<DAOProposal | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // For debugging: Reset dummy data
+    localStorage.removeItem('dummyDataInitialized');
+    
+    // Initialize dummy data if needed
+    initializeDummyData();
+    
+    // Load the first proposal and user profile
+    const proposals = getDAOProposals();
+    
+    if (proposals.length > 0) {
+      const activeProposal = proposals.find(p => p.votingStatus === 'open') || proposals[0];
+      setCurrentProposal(activeProposal);
+      
+      // Check if user has voted on this proposal
+      const voteInfo = hasUserVotedOnProposal(activeProposal.id);
+      if (voteInfo.voted && voteInfo.voteType) {
+        setVotingStatus(`voted-${voteInfo.voteType}`);
+        setTokenAmount(voteInfo.amount?.toString() || '');
+      }
+    } else {
+      console.log("No proposals found. Checking for approved research projects...");
+      
+      // Get research projects and approve some if needed
+      const projects = getResearchProjects();
+      approveResearchProjects(projects, 3);
+      
+      // Update localStorage with approved projects
+      localStorage.setItem('researchProjects', JSON.stringify(projects));
+      
+      // Sync DAO proposals with the approved research projects
+      syncDAOProposalsWithResearchProjects();
+      
+      // Try to get proposals again
+      const updatedProposals = getDAOProposals();
+      if (updatedProposals.length > 0) {
+        const activeProposal = updatedProposals.find(p => p.votingStatus === 'open') || updatedProposals[0];
+        setCurrentProposal(activeProposal);
+      } else {
+        console.log("Still no proposals after approving research projects");
+      }
+    }
+    
+    // Load user profile
+    const userProfileJson = localStorage.getItem('userProfile');
+    if (userProfileJson) {
+      setUserProfile(JSON.parse(userProfileJson));
+    }
+    
+    setIsLoading(false);
+  }, []);
 
   const faqs = [
     {
@@ -26,15 +93,88 @@ const DAOVotingPage = () => {
   }
 
   const handleVote = (voteType: 'for' | 'against') => {
-    if (!tokenAmount || parseFloat(tokenAmount) <= 0) {
+    if (!tokenAmount || parseFloat(tokenAmount) <= 0 || !currentProposal) {
       alert('Please enter a valid token amount')
       return
     }
     
-    setVotingStatus(voteType === 'for' ? 'voted-for' : 'voted-against')
-    // Here you would typically submit the vote to the blockchain
-    alert(`Vote cast ${voteType} with ${tokenAmount} DCNET tokens!`)
+    const amount = parseFloat(tokenAmount)
+    if (userProfile && userProfile.dcnetBalance < amount) {
+      alert('You do not have enough DCNET tokens')
+      return
+    }
+    
+    // Submit the vote
+    const success = voteOnDAOProposal(currentProposal.id, voteType, amount)
+    
+    if (success) {
+      setVotingStatus(voteType === 'for' ? 'voted-for' : 'voted-against')
+      
+      // Update the current proposal with new vote counts
+      const updatedProposal = getDAOProposalById(currentProposal.id)
+      if (updatedProposal) {
+        setCurrentProposal(updatedProposal)
+      }
+      
+      // Update user profile
+      const updatedUserProfileJson = localStorage.getItem('userProfile')
+      if (updatedUserProfileJson) {
+        setUserProfile(JSON.parse(updatedUserProfileJson))
+      }
+      
+      alert(`Vote cast ${voteType} with ${tokenAmount} DCNET tokens!`)
+    } else {
+      alert('Failed to cast vote. You may have already voted on this proposal.')
+    }
   }
+
+  // Format the remaining time for voting
+  const formatRemainingTime = (endTimeISOString: string): string => {
+    const endTime = new Date(endTimeISOString)
+    const now = new Date()
+    const diffMs = endTime.getTime() - now.getTime()
+    
+    if (diffMs <= 0) {
+      return 'Voting closed'
+    }
+    
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    
+    return `${diffDays} days, ${diffHours} hours`
+  }
+
+  // Calculate vote percentages
+  const calculateVotePercentage = (
+    forVotes: number, 
+    againstVotes: number
+  ): { forPercentage: number; againstPercentage: number } => {
+    const total = forVotes + againstVotes
+    if (total === 0) return { forPercentage: 50, againstPercentage: 50 }
+    
+    const forPercentage = Math.round((forVotes / total) * 100)
+    return { 
+      forPercentage, 
+      againstPercentage: 100 - forPercentage 
+    }
+  }
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
+  if (!currentProposal || !userProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        No active proposals found or user profile not loaded.
+      </div>
+    )
+  }
+
+  const { forPercentage, againstPercentage } = calculateVotePercentage(
+    currentProposal.votesFor, 
+    currentProposal.votesAgainst
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -57,37 +197,40 @@ const DAOVotingPage = () => {
               <div className="flex gap-6 items-start">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    Advancing Cancer Research with Novel Immunotherapies
+                    {currentProposal.title}
                   </h3>
                   <p className="text-gray-600 leading-relaxed mb-6">
-                    This proposal seeks funding for a groundbreaking research project focused on developing 
-                    new immunotherapies for advanced-stage cancers. The project aims to leverage cutting-edge 
-                    technologies to identify and validate novel therapeutic targets, ultimately leading to 
-                    the development of more effective and less toxic cancer treatments.
+                    {currentProposal.description}
                   </p>
                   
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Funding Request</span>
-                      <span className="font-semibold text-gray-900">150,000 DCNET</span>
+                      <span className="font-semibold text-gray-900">{currentProposal.fundingRequest.toLocaleString()} DCNET</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Voting Status</span>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Open
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        currentProposal.votingStatus === 'open' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {currentProposal.votingStatus === 'open' ? 'Open' : 'Closed'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Voting Ends In</span>
-                      <span className="font-semibold text-gray-900">3 days, 14 hours</span>
+                      <span className="font-semibold text-gray-900">
+                        {formatRemainingTime(currentProposal.votingEndsAt)}
+                      </span>
                     </div>
                   </div>
                 </div>
                 
-                {/* Cancer Research Image */}
+                {/* Research Image */}
                 <div className="w-64 h-48 bg-gradient-to-br from-teal-400 to-blue-600 rounded-lg flex items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-teal-400/20 to-blue-600/20"></div>
-                  {/* Cancer cell representations */}
+                  {/* Cell representations */}
                   <div className="relative">
                     <div className="w-12 h-12 bg-white/30 rounded-full absolute top-4 left-8 animate-pulse"></div>
                     <div className="w-8 h-8 bg-white/40 rounded-full absolute top-12 right-12"></div>
@@ -116,20 +259,21 @@ const DAOVotingPage = () => {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A90E2] focus:border-transparent"
                     min="0"
                     step="0.01"
+                    disabled={votingStatus !== 'pending' || currentProposal.votingStatus === 'closed'}
                   />
                 </div>
                 
                 <div className="flex gap-4 pt-4">
                   <Button
                     onClick={() => handleVote('for')}
-                    disabled={votingStatus !== 'pending'}
+                    disabled={votingStatus !== 'pending' || currentProposal.votingStatus === 'closed'}
                     className="flex-1 bg-[#4A90E2] hover:bg-[#357ABD] text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Vote For
                   </Button>
                   <Button
                     onClick={() => handleVote('against')}
-                    disabled={votingStatus !== 'pending'}
+                    disabled={votingStatus !== 'pending' || currentProposal.votingStatus === 'closed'}
                     variant="outline"
                     className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -156,24 +300,24 @@ const DAOVotingPage = () => {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-semibold text-gray-900">For</span>
-                    <span className="font-semibold text-gray-900">65%</span>
+                    <span className="font-semibold text-gray-900">{forPercentage}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                    <div className="bg-gray-900 h-3 rounded-full" style={{ width: '65%' }}></div>
+                    <div className="bg-gray-900 h-3 rounded-full" style={{ width: `${forPercentage}%` }}></div>
                   </div>
-                  <span className="text-sm text-gray-600">120,000 DCNET</span>
+                  <span className="text-sm text-gray-600">{currentProposal.votesFor.toLocaleString()} DCNET</span>
                 </div>
                 
                 {/* Against Votes */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-semibold text-gray-900">Against</span>
-                    <span className="font-semibold text-gray-900">35%</span>
+                    <span className="font-semibold text-gray-900">{againstPercentage}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                    <div className="bg-gray-900 h-3 rounded-full" style={{ width: '35%' }}></div>
+                    <div className="bg-gray-900 h-3 rounded-full" style={{ width: `${againstPercentage}%` }}></div>
                   </div>
-                  <span className="text-sm text-gray-600">65,000 DCNET</span>
+                  <span className="text-sm text-gray-600">{currentProposal.votesAgainst.toLocaleString()} DCNET</span>
                 </div>
               </div>
             </div>
@@ -212,7 +356,7 @@ const DAOVotingPage = () => {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Your DCNET Balance</h3>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#4A90E2] mb-2">2,450</div>
+                <div className="text-3xl font-bold text-[#4A90E2] mb-2">{userProfile.dcnetBalance.toLocaleString()}</div>
                 <div className="text-sm text-gray-600">DCNET Tokens</div>
               </div>
             </div>
@@ -223,7 +367,7 @@ const DAOVotingPage = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Available to Vote</span>
-                  <span className="font-semibold">2,450 DCNET</span>
+                  <span className="font-semibold">{userProfile.dcnetBalance.toLocaleString()} DCNET</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Currently Staked</span>
@@ -231,7 +375,7 @@ const DAOVotingPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Voting History</span>
-                  <span className="font-semibold">12 proposals</span>
+                  <span className="font-semibold">{userProfile.votingHistory} proposals</span>
                 </div>
               </div>
             </div>
@@ -242,15 +386,17 @@ const DAOVotingPage = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Voters</span>
-                  <span className="font-semibold">1,247</span>
+                  <span className="font-semibold">{currentProposal.totalVoters.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Tokens</span>
-                  <span className="font-semibold">185,000 DCNET</span>
+                  <span className="font-semibold">{(currentProposal.votesFor + currentProposal.votesAgainst).toLocaleString()} DCNET</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Participation Rate</span>
-                  <span className="font-semibold">73.2%</span>
+                  <span className="font-semibold">
+                    {Math.round(currentProposal.totalVoters / (currentProposal.totalVoters * 1.3) * 100)}%
+                  </span>
                 </div>
               </div>
             </div>
@@ -259,7 +405,11 @@ const DAOVotingPage = () => {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => window.location.href = '/dao/proposals'}
+                >
                   View All Proposals
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
