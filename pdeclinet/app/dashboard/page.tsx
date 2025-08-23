@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Navbar from "@/components/Navbar"
 
 // Simple Chevron SVG components
@@ -18,27 +19,71 @@ const ChevronUpIcon = ({className}: {className?: string}) => (
 
 // Define transaction history type
 interface Transaction {
-  date: string
-  activity: string
-  tokens: number
+  id: string
+  type: string
+  amount: number
+  description: string
+  created_at: string
+  blockchain_tx_hash?: string
 }
 
 // Define FAQ type
 interface FAQ {
   question: string
   answer: string
-  isOpen?: boolean
+  isOpen: boolean
+}
+
+// Define user info type
+interface UserInfo {
+  id: string
+  name: string
+  email: string
+  walletAddress: string
+  profile_picture?: string
+}
+
+// Define dashboard data type
+interface DashboardData {
+  totalTokens: number
+  dataContributions: number
+  activeStudies: number
+  totalRecords: number
+  totalAccesses: number
+  uniqueDataTypes: number
+}
+
+// Define notification type
+interface Notification {
+  id: string
+  type: string
+  message: string
+  is_read: boolean
+  created_at: string
+}
+
+// Define access request type
+interface AccessRequest {
+  id: string
+  requester_id: string
+  purpose: string
+  duration: number
+  status: string
+  created_at: string
+  wallet_address: string
+  user_type: string
+  data_type: string
 }
 
 export default function DashboardPage() {
-  // Transaction history data
-  const transactions: Transaction[] = [
-    { date: "2024-07-20", activity: "Data Upload", tokens: 250 },
-    { date: "2024-07-15", activity: "Study Participation", tokens: 500 },
-    { date: "2024-07-10", activity: "Data Upload", tokens: 200 },
-    { date: "2024-07-05", activity: "Study Participation", tokens: 150 },
-    { date: "2024-07-01", activity: "Initial Data Upload", tokens: 150 },
-  ]
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   // FAQ data with state for opening/closing
   const [faqs, setFaqs] = useState<FAQ[]>([
@@ -59,11 +104,222 @@ export default function DashboardPage() {
     }
   ])
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api'
+
+  // Check authentication and load user data
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('authToken')
+        const userType = localStorage.getItem('userType')
+        const storedUserInfo = localStorage.getItem('userInfo')
+
+        if (!token || userType !== 'patient') {
+          router.push('/')
+          return
+        }
+
+        // Parse stored user info
+        if (storedUserInfo) {
+          const parsedUserInfo = JSON.parse(storedUserInfo)
+          setUserInfo(parsedUserInfo)
+        }
+
+        // Fetch all dashboard data from backend
+        await Promise.all([
+          fetchPatientProfile(token),
+          fetchTokenTransactions(token),
+          fetchNotifications(token),
+          fetchAccessRequests(token)
+        ])
+
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        setError('Authentication failed. Please login again.')
+        router.push('/')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+  // Fetch patient profile and dashboard stats
+  const fetchPatientProfile = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/patient/profile`, {
+        headers: {
+          'x-auth-token': `${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Update user info with profile data
+        setUserInfo(prevInfo => ({
+          ...prevInfo!,
+          name: data.patient.name || prevInfo?.name,
+          email: data.patient.email || prevInfo?.email,
+          walletAddress: data.patient.walletAddress || prevInfo?.walletAddress
+        }))
+
+        // Set dashboard data from profile stats
+        setDashboardData({
+          totalTokens: 1250, // This would come from token contract in real implementation
+          dataContributions: data.patient.stats?.total_records || 0,
+          activeStudies: 3, // This would come from active research participations
+          totalRecords: data.patient.stats?.total_records || 0,
+          totalAccesses: data.patient.stats?.total_accesses || 0,
+          uniqueDataTypes: data.patient.stats?.unique_data_types || 0
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch patient profile:', error)
+    }
+  }
+
+  // Fetch token transactions
+  const fetchTokenTransactions = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/patient/token-transactions`, {
+        headers: {
+          'x-auth-token': `${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setTransactions(data.transactions || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch token transactions:', error)
+      // Set default transactions if API fails
+      setTransactions([
+        { id: '1', type: 'data_submission_reward', amount: 250, description: 'Data Upload', created_at: '2024-07-20T00:00:00Z' },
+        { id: '2', type: 'study_participation', amount: 500, description: 'Study Participation', created_at: '2024-07-15T00:00:00Z' },
+        { id: '3', type: 'data_submission_reward', amount: 200, description: 'Data Upload', created_at: '2024-07-10T00:00:00Z' },
+        { id: '4', type: 'study_participation', amount: 150, description: 'Study Participation', created_at: '2024-07-05T00:00:00Z' },
+        { id: '5', type: 'initial_reward', amount: 150, description: 'Initial Data Upload', created_at: '2024-07-01T00:00:00Z' }
+      ])
+    }
+  }
+
+  // Fetch notifications
+  const fetchNotifications = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/patient/notifications`, {
+        headers: {
+          'x-auth-token': `${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data.notifications || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error)
+    }
+  }
+
+  // Fetch access requests
+  const fetchAccessRequests = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/patient/access-requests`, {
+        headers: {
+          'x-auth-token': `${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAccessRequests(data.requests || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch access requests:', error)
+    }
+  }
+
   // Toggle FAQ open/close
   const toggleFAQ = (index: number) => {
     setFaqs(faqs.map((faq, i) => 
       i === index ? { ...faq, isOpen: !faq.isOpen } : faq
     ))
+  }
+
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('userType')
+    localStorage.removeItem('walletAddress')
+    localStorage.removeItem('userInfo')
+    router.push('/')
+  }
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      year: '2-digit',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  }
+
+  // Get transaction display name
+  const getTransactionDisplayName = (type: string) => {
+    switch (type) {
+      case 'data_submission_reward':
+        return 'Data Upload Reward'
+      case 'study_participation':
+        return 'Study Participation'
+      case 'initial_reward':
+        return 'Initial Reward'
+      case 'referral_bonus':
+        return 'Referral Bonus'
+      default:
+        return 'Token Transaction'
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+        <Navbar />
+        <main className="container mx-auto px-4 py-10 max-w-6xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#DF7373] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading dashboard...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+        <Navbar />
+        <main className="container mx-auto px-4 py-10 max-w-6xl">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">{error}</p>
+            <button 
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-[#DF7373] text-white rounded-lg hover:bg-[#DF7373]/90"
+            >
+              Go Home
+            </button>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -72,8 +328,46 @@ export default function DashboardPage() {
       
       <main className="container mx-auto px-4 py-10 max-w-6xl">
         {/* Header */}
-        <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
-        <p className="text-gray-600 mt-1 mb-8">Track your DCNET token earnings and data contributions.</p>
+        <div className="mb-8">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Welcome back, {userInfo?.name || 'Patient'}
+              </h1>
+              <p className="text-gray-600 mt-1">Track your DCNET token earnings and data contributions.</p>
+              {userInfo?.email && (
+                <p className="text-sm text-gray-500 mt-1">{userInfo.email}</p>
+              )}
+              {userInfo?.walletAddress && (
+                <p className="text-xs text-gray-400 mt-1 font-mono">
+                  {userInfo.walletAddress.slice(0, 6)}...{userInfo.walletAddress.slice(-4)}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              {/* Notifications indicator */}
+              {notifications.filter(n => !n.is_read).length > 0 && (
+                <div className="relative">
+                  <button className="p-2 text-gray-600 hover:text-gray-800 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-5-5V9.09c0-2.209-1.791-4-4-4S7 6.881 7 9.09v2.91L2 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </button>
+                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {notifications.filter(n => !n.is_read).length}
+                  </div>
+                </div>
+              )}
+              
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Balance Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
@@ -82,12 +376,14 @@ export default function DashboardPage() {
               <h2 className="text-sm font-medium text-gray-700">Total DCNET Balance</h2>
               <div className="bg-[#DF7373]/10 rounded-md p-1.5">
                 <svg className="h-4 w-4 text-[#DF7373]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
               </div>
             </div>
             <div className="flex items-baseline">
-              <p className="text-3xl font-bold text-gray-900">1,250</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {dashboardData?.totalTokens?.toLocaleString() || '1,250'}
+              </p>
               <span className="ml-2 text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">+15%</span>
             </div>
             <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
@@ -103,26 +399,34 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-baseline">
-              <p className="text-3xl font-bold text-gray-900">8</p>
-              <span className="ml-2 text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">+2</span>
+              <p className="text-3xl font-bold text-gray-900">
+                {dashboardData?.dataContributions || 0}
+              </p>
+              <span className="ml-2 text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
+                +{dashboardData?.uniqueDataTypes || 0}
+              </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Files uploaded</p>
+            <p className="text-xs text-gray-500 mt-1">Records uploaded</p>
           </div>
           
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-medium text-gray-700">Research Impact</h2>
+              <h2 className="text-sm font-medium text-gray-700">Access Requests</h2>
               <div className="bg-[#DF7373]/10 rounded-md p-1.5">
                 <svg className="h-4 w-4 text-[#DF7373]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
             </div>
             <div className="flex items-baseline">
-              <p className="text-3xl font-bold text-gray-900">3</p>
-              <span className="ml-2 text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">Active</span>
+              <p className="text-3xl font-bold text-gray-900">
+                {accessRequests.filter(req => req.status === 'pending').length}
+              </p>
+              <span className="ml-2 text-xs font-medium text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded">
+                Pending
+              </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Contributing studies</p>
+            <p className="text-xs text-gray-500 mt-1">Awaiting your review</p>
           </div>
         </div>
 
@@ -133,14 +437,11 @@ export default function DashboardPage() {
               <div className="h-5 w-5 rounded-full bg-[#DF7373]/10 flex items-center justify-center mr-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-[#DF7373]"></div>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">Transaction History</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Recent Token Transactions</h2>
             </div>
-            <button className="text-[#DF7373] hover:text-[#DF7373]/80 text-sm font-medium flex items-center transition-colors">
-              View All
-              <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </button>
+            <span className="text-sm text-gray-500">
+              {transactions.length} transactions
+            </span>
           </div>
           
           <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
@@ -152,28 +453,38 @@ export default function DashboardPage() {
             </div>
             
             {/* Table Body */}
-            {transactions.map((transaction, index) => (
-              <div 
-                key={index}
-                className={`grid grid-cols-3 ${index !== transactions.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors`}
-              >
-                <div className="px-5 py-3.5 text-sm text-gray-600">
-                  {new Date(transaction.date).toLocaleDateString('en-US', { 
-                    year: '2-digit',
-                    month: '2-digit',
-                    day: '2-digit'
-                  })}
+            {transactions.length > 0 ? (
+              transactions.slice(0, 5).map((transaction, index) => (
+                <div 
+                  key={transaction.id}
+                  className={`grid grid-cols-3 ${index !== Math.min(transactions.length, 5) - 1 ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors`}
+                >
+                  <div className="px-5 py-3.5 text-sm text-gray-600">
+                    {formatDate(transaction.created_at)}
+                  </div>
+                  <div className="px-5 py-3.5 text-sm text-gray-700">
+                    {transaction.description || getTransactionDisplayName(transaction.type)}
+                  </div>
+                  <div className="px-5 py-3.5 text-sm text-green-600 font-medium">
+                    +{transaction.amount} DCNET
+                  </div>
                 </div>
-                <div className="px-5 py-3.5 text-sm text-gray-700">{transaction.activity}</div>
-                <div className="px-5 py-3.5 text-sm text-green-600 font-medium">+{transaction.tokens} DCNET</div>
+              ))
+            ) : (
+              <div className="px-5 py-8 text-center text-gray-500">
+                <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p>No token transactions yet</p>
+                <p className="text-sm">Start contributing data to earn DCNET tokens</p>
               </div>
-            ))}
+            )}
           </div>
         </section>
 
-        {/* Grid section with charts and info */}
+        {/* Grid section with charts and access requests */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Data Contribution & Reward Trends */}
+          {/* Token Earnings Chart */}
           <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center">
@@ -191,7 +502,9 @@ export default function DashboardPage() {
             
             <div className="mb-4">
               <div className="flex items-baseline">
-                <p className="text-2xl font-bold text-gray-900 mr-2">1,250</p>
+                <p className="text-2xl font-bold text-gray-900 mr-2">
+                  {dashboardData?.totalTokens || 1250}
+                </p>
                 <span className="text-xs font-medium text-green-600">+15%</span>
               </div>
               <p className="text-xs text-gray-500">Last 30 Days</p>
@@ -219,51 +532,60 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* How to Use Tokens */}
+          {/* Recent Access Requests */}
           <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center mb-5">
-              <div className="h-5 w-5 rounded-full bg-[#DF7373]/10 flex items-center justify-center mr-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-[#DF7373]"></div>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center">
+                <div className="h-5 w-5 rounded-full bg-[#DF7373]/10 flex items-center justify-center mr-2">
+                  <div className="h-2.5 w-2.5 rounded-full bg-[#DF7373]"></div>
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">Recent Access Requests</h2>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">How to Use DCNET Tokens</h2>
+              <span className="text-xs text-gray-500">
+                {accessRequests.length} total
+              </span>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <div className="bg-[#DF7373]/10 p-2 rounded-md mr-3">
-                  <svg className="h-5 w-5 text-[#DF7373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <div className="space-y-3">
+              {accessRequests.length > 0 ? (
+                accessRequests.slice(0, 4).map((request) => (
+                  <div key={request.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-800">
+                        {request.data_type.charAt(0).toUpperCase() + request.data_type.slice(1)} Data Request
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {request.purpose.length > 50 ? 
+                          request.purpose.substring(0, 50) + '...' : 
+                          request.purpose
+                        }
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formatDate(request.created_at)}
+                      </p>
+                    </div>
+                    <div className="ml-3">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        request.status === 'pending' 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : request.status === 'approved'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {request.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
+                  <p>No access requests</p>
+                  <p className="text-sm">Researchers haven't requested access to your data yet</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-gray-800">Governance Voting</h3>
-                  <p className="text-sm text-gray-600 mt-1">Participate in platform decisions and vote on research priorities.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="bg-[#DF7373]/10 p-2 rounded-md mr-3">
-                  <svg className="h-5 w-5 text-[#DF7373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-800">Research Insights</h3>
-                  <p className="text-sm text-gray-600 mt-1">Access premium research findings and personalized health insights.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="bg-[#DF7373]/10 p-2 rounded-md mr-3">
-                  <svg className="h-5 w-5 text-[#DF7373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-800">Support Research</h3>
-                  <p className="text-sm text-gray-600 mt-1">Fund research projects that align with your health interests.</p>
-                </div>
-              </div>
+              )}
             </div>
           </section>
         </div>
