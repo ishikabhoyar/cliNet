@@ -165,7 +165,7 @@ export function generateDummyUserProfile(): UserProfile {
     bio: "Clinical researcher specializing in genomics and precision medicine with over 10 years of experience in the field.",
     walletAddress: "0x" + Math.random().toString(16).substring(2, 42),
     createdAt: new Date().toISOString(),
-    dcnetBalance: 2450,
+    dcnetBalance: 5000,
     votingHistory: 12
   };
 }
@@ -616,4 +616,18 @@ export function hasUserVotedOnProposal(proposalId: string): { voted: boolean; vo
     voteType: vote.voteType,
     amount: vote.tokenAmount
   };
+}
+
+// Function to update user's DCNET balance
+export function updateUserDCNETBalance(newBalance: number): boolean {
+  const userProfileJson = localStorage.getItem('userProfile');
+  if (!userProfileJson) {
+    return false;
+  }
+  
+  const userProfile: UserProfile = JSON.parse(userProfileJson);
+  userProfile.dcnetBalance = newBalance;
+  
+  localStorage.setItem('userProfile', JSON.stringify(userProfile));
+  return true;
 }

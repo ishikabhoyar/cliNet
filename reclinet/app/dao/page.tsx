@@ -14,6 +14,7 @@ import {
   getResearchProjects,
   approveResearchProjects,
   getUserVotes,
+  updateUserDCNETBalance,
   UserProfile,
   DAOProposal,
   UserVote
@@ -104,7 +105,14 @@ const DAOVotingPage = () => {
     // Load user profile
     const userProfileJson = localStorage.getItem('userProfile');
     if (userProfileJson) {
-      setUserProfile(JSON.parse(userProfileJson));
+      // Update DCNET balance to 5000 if it's not already
+      updateUserDCNETBalance(5000);
+      
+      // Load the updated profile
+      const updatedUserProfileJson = localStorage.getItem('userProfile');
+      if (updatedUserProfileJson) {
+        setUserProfile(JSON.parse(updatedUserProfileJson));
+      }
     }
     
     setIsLoading(false);
