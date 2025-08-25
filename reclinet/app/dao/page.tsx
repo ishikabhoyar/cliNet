@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, X, Calendar, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { 
@@ -13,8 +13,10 @@ import {
   syncDAOProposalsWithResearchProjects,
   getResearchProjects,
   approveResearchProjects,
+  getUserVotes,
   UserProfile,
-  DAOProposal
+  DAOProposal,
+  UserVote
 } from '@/lib/dummyData'
 
 const DAOVotingPage = () => {
@@ -24,6 +26,37 @@ const DAOVotingPage = () => {
   const [currentProposal, setCurrentProposal] = useState<DAOProposal | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [showVotingHistory, setShowVotingHistory] = useState(false)
+  const [votingHistory, setVotingHistory] = useState<any[]>([])
+
+  // Function to load actual voting history
+  const loadVotingHistory = () => {
+    const userVotes = getUserVotes();
+    const allProposals = getDAOProposals();
+    
+    // Transform user votes into readable voting history
+    const history = userVotes.map((vote: UserVote) => {
+      const proposal = allProposals.find(p => p.id === vote.proposalId);
+      
+      // Determine if the proposal passed based on vote counts
+      const totalVotes = proposal ? proposal.votesFor + proposal.votesAgainst : 0;
+      const forPercentage = proposal && totalVotes > 0 ? proposal.votesFor / totalVotes : 0;
+      const outcome = forPercentage > 0.5 ? 'passed' : 'failed';
+      
+      return {
+        id: vote.proposalId,
+        title: proposal?.title || 'Unknown Proposal',
+        date: vote.votedAt,
+        vote: vote.voteType,
+        amount: vote.tokenAmount,
+        outcome: proposal?.votingStatus === 'closed' ? outcome : 'ongoing',
+        description: proposal?.description || 'No description available',
+        proposalStatus: proposal?.votingStatus || 'unknown'
+      };
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date, newest first
+    
+    setVotingHistory(history);
+  };
 
   useEffect(() => {
     // Initialize dummy data if needed
@@ -75,6 +108,9 @@ const DAOVotingPage = () => {
     }
     
     setIsLoading(false);
+    
+    // Load actual voting history
+    loadVotingHistory();
     
     // Set up an interval to check for new proposals every 5 seconds
     const intervalId = setInterval(() => {
@@ -144,6 +180,9 @@ const DAOVotingPage = () => {
         setUserProfile(JSON.parse(updatedUserProfileJson))
       }
       
+      // Refresh voting history to include the new vote
+      loadVotingHistory()
+      
       alert(`Vote cast ${voteType} with ${tokenAmount} DCNET tokens!`)
     } else {
       alert('Failed to cast vote. You may have already voted on this proposal.')
@@ -204,8 +243,111 @@ const DAOVotingPage = () => {
     currentProposal.votesAgainst
   )
 
+  // Voting History Modal Component
+  const VotingHistoryModal = () => {
+    if (!showVotingHistory) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Modal Header */}
+          <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
+            <h2 className="text-2xl font-bold text-gray-900">Your Voting History</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowVotingHistory(false)}
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="flex-1 overflow-y-auto p-6" style={{ scrollBehavior: 'smooth' }}>
+            {votingHistory.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-lg mb-2">No voting history found</div>
+                <div className="text-gray-500 text-sm">You haven't participated in any votes yet.</div>
+              </div>
+            ) : (
+              <div className="space-y-4 pb-4">
+                {votingHistory.map((vote, index) => (
+                  <div key={vote.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">{vote.title}</h3>
+                        <p className="text-gray-600 text-sm mb-2">{vote.description}</p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {new Date(vote.date).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </div>
+                          <div className="font-medium">
+                            {vote.amount.toLocaleString()} DCNET
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {/* Vote Type */}
+                        <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                          vote.vote === 'for' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {vote.vote === 'for' ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : (
+                            <XCircle className="h-4 w-4" />
+                          )}
+                          Voted {vote.vote === 'for' ? 'For' : 'Against'}
+                        </div>
+                        
+                        {/* Outcome */}
+                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          vote.outcome === 'passed' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : vote.outcome === 'failed'
+                            ? 'bg-gray-100 text-gray-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {vote.outcome === 'ongoing' ? 'Voting Open' : `Proposal ${vote.outcome === 'passed' ? 'Passed' : 'Failed'}`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                Total Proposals Voted On: <span className="font-semibold">{votingHistory.length}</span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Total DCNET Used: <span className="font-semibold">
+                  {votingHistory.reduce((total, vote) => total + vote.amount, 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Voting History Modal */}
+      <VotingHistoryModal />
+      
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -440,7 +582,11 @@ const DAOVotingPage = () => {
                 >
                   View All Proposals
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setShowVotingHistory(true)}
+                >
                   Voting History
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
