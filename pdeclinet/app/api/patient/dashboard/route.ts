@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const token = authHeader.split(' ')[1]
 
     // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { userType: string }
     
     if (decoded.userType !== 'patient') {
       return NextResponse.json(

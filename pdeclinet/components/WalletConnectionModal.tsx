@@ -66,9 +66,9 @@ export default function WalletConnectionModal({
       } else {
         throw new Error('No wallet accounts found')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Wallet connection failed:', error)
-      setErrorMessage(error.message || 'Failed to connect wallet. Please try again.')
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect wallet. Please try again.')
     } finally {
       setIsConnecting(false)
     }
