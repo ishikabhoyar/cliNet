@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 const GoogleSignIn = ({ redirectUrl }) => {
   const handleGoogleSignIn = () => {
     // If redirectUrl is not set yet (during initial server render), do nothing
-    if (!redirectUrl) return;
+    if (!redirectUrl || typeof window === 'undefined') return;
     
     const encodedRedirectUrl = encodeURIComponent(redirectUrl);
     const googleAuthUrl = `https://small-mouse-2759.arnabbhowmik019.workers.dev/google/auth?redirect_url=${encodedRedirectUrl}`;

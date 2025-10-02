@@ -47,7 +47,7 @@ export default function LoginPage() {
               {showGoogleAuth ? (
                 <>
                   <div className="w-full">
-                    <GoogleSignIn redirectUrl={`${window.location.origin}/callback`} />
+                    <GoogleSignIn redirectUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/callback`} />
                   </div>
                   
                   <div className="relative w-full">
@@ -82,7 +82,7 @@ export default function LoginPage() {
               )}
               
               <div className="text-center text-sm text-gray-500">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link href="/" className="text-[#DF7373] hover:underline">
                   Sign up
                 </Link>

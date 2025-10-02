@@ -15,7 +15,12 @@ interface HealthRecord {
   created_at: string
   updated_at: string
   access_count: number
-  permissions?: any
+  permissions?: {
+    research?: boolean
+    commercial?: boolean
+    thirdParty?: boolean
+    anonymous?: boolean
+  }
   consent_active?: boolean
   consent_type?: string
   expiry_date?: string

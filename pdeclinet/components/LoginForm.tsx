@@ -38,12 +38,12 @@ export default function LoginForm() {
       } else {
         throw new Error('No wallet accounts found')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Wallet connection failed:', error)
-      if (error.code === 4001) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 4001) {
         setError('Please approve the connection request in MetaMask.')
       } else {
-        setError(error.message || 'Failed to connect wallet. Please try again.')
+        setError(error instanceof Error ? error.message : 'Failed to connect wallet. Please try again.')
       }
     } finally {
       setIsConnecting(false)
@@ -96,9 +96,9 @@ export default function LoginForm() {
       // Redirect to dashboard
       router.push('/dashboard')
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Authentication error:', error)
-      setError(error.message || 'Failed to authenticate. Please try again.')
+      setError(error instanceof Error ? error.message : 'Failed to authenticate. Please try again.')
     } finally {
       setIsAuthenticating(false)
     }

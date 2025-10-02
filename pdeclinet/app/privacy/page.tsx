@@ -85,7 +85,7 @@ export default function PrivacySettingsPage() {
               </div>
               <h2 className="text-lg font-semibold text-gray-900">Research Categories</h2>
             </div>
-            <p className="text-gray-600 mb-5 text-sm">Select the research categories that you're willing to share your data with.</p>
+            <p className="text-gray-600 mb-5 text-sm">Select the research categories that you&apos;re willing to share your data with.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
               {researchCategories.map((category) => (
                 <div key={category} className="flex items-center">
