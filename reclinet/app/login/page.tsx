@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Navbar from "@/components/Navbar"
@@ -8,7 +8,13 @@ import GoogleSignIn from "@/components/GoogleSignIn"
 
 export default function LoginPage() {
   const [showGoogleAuth, setShowGoogleAuth] = useState(true)
+  const [redirectUrl, setRedirectUrl] = useState('')
   const router = useRouter()
+
+  useEffect(() => {
+    // Set redirect URL on client side to avoid SSR issues
+    setRedirectUrl(`${window.location.origin}/callback`)
+  }, [])
 
   const handleLoginAction = () => {
     // This is just a placeholder to use the router
@@ -51,7 +57,7 @@ export default function LoginPage() {
               {showGoogleAuth ? (
                 <>
                   <div className="w-full">
-                    <GoogleSignIn redirectUrl={`${window.location.origin}/callback`} />
+                    {redirectUrl && <GoogleSignIn redirectUrl={redirectUrl} />}
                   </div>
                   
                   <div className="relative w-full">

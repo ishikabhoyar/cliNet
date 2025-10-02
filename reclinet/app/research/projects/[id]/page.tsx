@@ -167,7 +167,7 @@ export default function ResearchProjectPage() {
         <div className="max-w-md w-full bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center">
           <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Project Not Found</h2>
-          <p className="text-gray-600 mb-6">The research project you're looking for could not be found.</p>
+          <p className="text-gray-600 mb-6">The research project you&apos;re looking for could not be found.</p>
           <Button 
             className="bg-[#DF7373] hover:bg-[#DF7373]/90 text-white"
             onClick={() => router.push('/research/projects')}

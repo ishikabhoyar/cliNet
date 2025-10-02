@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import WalletConnectionModal from '@/components/WalletConnectionModal'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -17,7 +17,7 @@ interface UserInfo {
   locale?: string
 }
 
-export default function CallbackPage() {
+function CallbackContent() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
   const [showWalletModal, setShowWalletModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -189,5 +189,27 @@ export default function CallbackPage() {
         onRegistrationSuccess={handleRegistrationSuccess}
       />
     </div>
+  )
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Loading...
+            </h2>
+            <p className="text-gray-600">
+              Please wait while we process your request...
+            </p>
+          </div>
+        </div>
+      </div>
+    }>
+      <CallbackContent />
+    </Suspense>
   )
 }

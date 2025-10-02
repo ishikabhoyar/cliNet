@@ -259,6 +259,9 @@ export function initializeDummyData(): void {
   localStorage.setItem('authToken', 'dummy-auth-token-' + uuidv4());
   localStorage.setItem('dummyDataInitialized', 'true');
   
+  // Create sample voting history for testing
+  createSampleVotingHistory();
+  
   console.log('Initialized dummy data in localStorage');
 }
 
@@ -630,4 +633,40 @@ export function updateUserDCNETBalance(newBalance: number): boolean {
   
   localStorage.setItem('userProfile', JSON.stringify(userProfile));
   return true;
+}
+
+// Function to create sample voting history for testing
+export function createSampleVotingHistory(): void {
+  const userProfileJson = localStorage.getItem('userProfile');
+  if (!userProfileJson) return;
+  
+  const userProfile: UserProfile = JSON.parse(userProfileJson);
+  const proposals = getDAOProposals();
+  
+  if (proposals.length === 0) return;
+  
+  // Create some sample votes
+  const sampleVotes: UserVote[] = [
+    {
+      proposalId: proposals[0]?.id || '1',
+      userId: userProfile.id,
+      voteType: 'for',
+      tokenAmount: 100,
+      votedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days ago
+    },
+    {
+      proposalId: proposals[1]?.id || '2',
+      userId: userProfile.id,
+      voteType: 'against',
+      tokenAmount: 150,
+      votedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days ago
+    }
+  ];
+  
+  // Only add if there are no existing votes
+  const existingVotes = getUserVotes();
+  if (existingVotes.length === 0) {
+    localStorage.setItem('userVotes', JSON.stringify(sampleVotes));
+    console.log('Created sample voting history for testing');
+  }
 }

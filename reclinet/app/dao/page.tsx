@@ -20,6 +20,17 @@ import {
   UserVote
 } from '@/lib/dummyData'
 
+interface VotingHistoryItem {
+  id: string;
+  title: string;
+  date: string;
+  vote: 'for' | 'against';
+  amount: number;
+  outcome: 'passed' | 'failed' | 'ongoing';
+  description: string;
+  proposalStatus: string;
+}
+
 const DAOVotingPage = () => {
   const [tokenAmount, setTokenAmount] = useState('')
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
@@ -28,7 +39,7 @@ const DAOVotingPage = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showVotingHistory, setShowVotingHistory] = useState(false)
-  const [votingHistory, setVotingHistory] = useState<any[]>([])
+  const [votingHistory, setVotingHistory] = useState<VotingHistoryItem[]>([])
 
   // Function to load actual voting history
   const loadVotingHistory = () => {
@@ -42,7 +53,8 @@ const DAOVotingPage = () => {
       // Determine if the proposal passed based on vote counts
       const totalVotes = proposal ? proposal.votesFor + proposal.votesAgainst : 0;
       const forPercentage = proposal && totalVotes > 0 ? proposal.votesFor / totalVotes : 0;
-      const outcome = forPercentage > 0.5 ? 'passed' : 'failed';
+      const passedOrFailed = forPercentage > 0.5 ? 'passed' : 'failed';
+      const outcome: 'passed' | 'failed' | 'ongoing' = proposal?.votingStatus === 'closed' ? passedOrFailed : 'ongoing';
       
       return {
         id: vote.proposalId,
@@ -50,7 +62,7 @@ const DAOVotingPage = () => {
         date: vote.votedAt,
         vote: vote.voteType,
         amount: vote.tokenAmount,
-        outcome: proposal?.votingStatus === 'closed' ? outcome : 'ongoing',
+        outcome,
         description: proposal?.description || 'No description available',
         proposalStatus: proposal?.votingStatus || 'unknown'
       };
@@ -276,11 +288,11 @@ const DAOVotingPage = () => {
             {votingHistory.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-lg mb-2">No voting history found</div>
-                <div className="text-gray-500 text-sm">You haven't participated in any votes yet.</div>
+                <div className="text-gray-500 text-sm">You haven&apos;t participated in any votes yet.</div>
               </div>
             ) : (
               <div className="space-y-4 pb-4">
-                {votingHistory.map((vote, index) => (
+                {votingHistory.map((vote) => (
                   <div key={vote.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">

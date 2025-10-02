@@ -166,7 +166,7 @@ const SubmitResearchProposalPage = () => {
       
       // Check for non-JSON responses (like HTML error pages)
       const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
+      if (!contentType?.includes('application/json')) {
         throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`)
       }
       
